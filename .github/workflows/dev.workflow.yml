@@ -55,8 +55,8 @@ jobs:
       - name: PMD check
         run: mvn pmd:check
       - id: getfilename
-        run: echo "file=$(ls target/symphony-dal-poly-lens-aggregator-${{ needs.versiongenerate.outputs.version }}.jar)" >> $GITHUB_OUTPUT
+        run: echo "file=$(ls target/symphony-dal-infrastructure-management-polycom-lens-${{ needs.versiongenerate.outputs.version }}.jar)" >> $GITHUB_OUTPUT
       - uses: actions/upload-artifact@v3
         with:
-          name: QSysReflect
+          name: PolyLens
           path: ${{ steps.getfilename.outputs.file }}
