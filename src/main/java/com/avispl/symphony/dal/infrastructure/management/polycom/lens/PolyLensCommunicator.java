@@ -4,10 +4,15 @@
 package com.avispl.symphony.dal.infrastructure.management.polycom.lens;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -40,9 +45,114 @@ import com.avispl.symphony.dal.util.StringUtils;
  * Controlling:
  */
 public class PolyLensCommunicator extends RestCommunicator implements Aggregator, Monitorable, Controller {
+	/**
+	 * Process that is running constantly and triggers collecting data from PoLy Lens API endpoints, based on the given timeouts and thresholds.
+	 *
+	 * @author Harrry
+	 * @since 1.0.0
+	 */
+	class PolyLensDataLoader implements Runnable {
+		private volatile boolean inProgress;
+		private volatile int threadIndex = 0;
+
+		public PolyLensDataLoader() {
+			inProgress = true;
+		}
+
+		@Override
+		public void run() {
+			loop:
+			while (inProgress) {
+				try {
+					TimeUnit.MILLISECONDS.sleep(500);
+				} catch (InterruptedException e) {
+					// Ignore for now
+				}
+
+				if (!inProgress) {
+					break loop;
+				}
+
+				// next line will determine whether Poly Lens monitoring was paused
+				updateAggregatorStatus();
+				if (devicePaused) {
+					continue loop;
+				}
+				long currentTimestamp = System.currentTimeMillis();
+				if (logger.isDebugEnabled()) {
+					logger.debug("Fetching other than PoLy Lens device list");
+				}
+				if (threadIndex < threadCount && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
+					threadIndex++;
+					populateDeviceDetails();
+					try {
+						Thread.sleep(5000);
+					} catch (InterruptedException e) {
+						throw new RuntimeException(e);
+					}
+					System.out.println(aggregatedDeviceList.size());
+				}
+
+				if (!inProgress) {
+					break loop;
+				}
+
+				int aggregatedDevicesCount = aggregatedDeviceList.size();
+				if (aggregatedDevicesCount == 0) {
+					continue loop;
+				}
+
+				while (nextDevicesCollectionIterationTimestamp > System.currentTimeMillis()) {
+					try {
+						TimeUnit.MILLISECONDS.sleep(1000);
+					} catch (InterruptedException e) {
+						//
+					}
+				}
+				if (threadIndex == threadCount) {
+					threadIndex = 0;
+					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
+				}
+
+				if (logger.isDebugEnabled()) {
+					logger.debug("Finished collecting devices statistics cycle at " + new Date());
+				}
+			}
+			// Finished collecting
+		}
+
+		/**
+		 * Triggers main loop to stop
+		 */
+		public void stop() {
+			inProgress = false;
+		}
+	}
+
 	private final ReentrantLock reentrantLock = new ReentrantLock();
 	ObjectMapper objectMapper = new ObjectMapper();
 	private String loginHost = "https://login.silica-prod01.io.lens.poly.com/oauth/token";
+	private PolyLensDataLoader deviceDataLoader;
+
+	/**
+	 * List of aggregated device
+	 */
+	private List<AggregatedDevice> aggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
+
+	/**
+	 * We don't want the statistics to be collected constantly, because if there's not a big list of devices -
+	 * new devices' statistics loop will be launched before the next monitoring iteration. To avoid that -
+	 * this variable stores a timestamp which validates it, so when the devices' statistics is done collecting, variable
+	 * is set to currentTime + 30s, at the same time, calling {@link #retrieveMultipleStatistics()} and updating the
+	 * {@link #aggregatedDeviceList} resets it to the currentTime timestamp, which will re-activate data collection.
+	 */
+	private long nextDevicesCollectionIterationTimestamp;
+
+	/**
+	 * Number of threads used in a poly internal
+	 */
+	private int threadCount;
+	private int pageSize = 99;
 
 	/**
 	 * save time get token
@@ -60,9 +170,52 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	private String apiToken;
 
 	/**
+	 * Executor that runs all the async operations, that is posting and
+	 */
+	private ExecutorService executorService;
+
+	/**
+	 * This parameter holds timestamp of when we need to stop performing API calls
+	 * It used when device stop retrieving statistic. Updated each time of called #retrieveMultipleStatistics
+	 */
+	private volatile long validRetrieveStatisticsTimestamp;
+
+	/**
+	 * Aggregator inactivity timeout. If the {@link PolyLensCommunicator#retrieveMultipleStatistics()}  method is not
+	 * called during this period of time - device is considered to be paused, thus the Cloud API
+	 * is not supposed to be called
+	 */
+	private static final long retrieveStatisticsTimeOut = 3 * 60 * 1000;
+
+	/**
 	 * List of System Response
 	 */
 	private SystemInformation systemInformation = new SystemInformation();
+
+	/**
+	 * Indicates whether a device is considered as paused.
+	 * True by default so if the system is rebooted and the actual value is lost -> the device won't start stats
+	 * collection unless the {@link PolyLensCommunicator#retrieveMultipleStatistics()} method is called which will change it
+	 * to a correct value
+	 */
+	private volatile boolean devicePaused = true;
+
+	/**
+	 * Update the status of the device.
+	 * The device is considered as paused if did not receive any retrieveMultipleStatistics()
+	 * calls during {@link PolyLensCommunicator}
+	 */
+	private synchronized void updateAggregatorStatus() {
+		devicePaused = validRetrieveStatisticsTimestamp < System.currentTimeMillis();
+	}
+
+	/**
+	 * Uptime time stamp to valid one
+	 */
+	private synchronized void updateValidRetrieveStatisticsTimestamp() {
+		validRetrieveStatisticsTimestamp = System.currentTimeMillis() + retrieveStatisticsTimeOut;
+		updateAggregatorStatus();
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -92,7 +245,28 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 */
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics() {
-		return null;
+		reentrantLock.lock();
+		try {
+			if (systemInformation.getCountDevices() != null) {
+				threadCount = 1;
+				if (systemInformation.getCountDevices() > pageSize) {
+					threadCount = 2;
+				}
+				if (checkValidApiToken()) {
+					if (executorService == null) {
+						executorService = Executors.newFixedThreadPool(1);
+						executorService.submit(deviceDataLoader = new PolyLensDataLoader());
+					}
+					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis();
+					updateValidRetrieveStatisticsTimestamp();
+				}
+
+				return aggregatedDeviceList;
+			}
+			return aggregatedDeviceList;
+		} finally {
+			reentrantLock.unlock();
+		}
 	}
 
 	/**
@@ -163,6 +337,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		if (logger.isDebugEnabled()) {
 			logger.debug("Internal init is called.");
 		}
+		executorService = Executors.newFixedThreadPool(1);
+		executorService.submit(deviceDataLoader = new PolyLensDataLoader());
 		super.internalInit();
 	}
 
@@ -175,6 +351,17 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			logger.debug("Internal destroy is called.");
 		}
 
+		if (deviceDataLoader != null) {
+			deviceDataLoader.stop();
+			deviceDataLoader = null;
+		}
+
+		if (executorService != null) {
+			executorService.shutdownNow();
+			executorService = null;
+		}
+
+		aggregatedDeviceList.clear();
 		super.internalDestroy();
 	}
 
@@ -239,6 +426,14 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		} catch (Exception e) {
 			throw new ResourceNotReachableException("Error when get system information", e);
 		}
+	}
+
+	/**
+	 * populate detail aggregated device
+	 * add aggregated device into aggregated device list
+	 */
+	public void populateDeviceDetails() {
+		//Todo
 	}
 
 	/**
