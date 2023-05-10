@@ -1,4 +1,4 @@
-package com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto;
+package com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.system;
 
 /**
  * MyIP includes Ip Poly Lens
