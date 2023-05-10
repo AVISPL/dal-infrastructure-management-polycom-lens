@@ -2,7 +2,7 @@
  * Copyright (c) 2023 AVI-SPL, Inc. All Rights Reserved.
  */
 
-package com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto;
+package com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.system;
 
 /**
  * Manage query cost in graphQL

@@ -2,7 +2,7 @@
  * Copyright (c) 2023 AVI-SPL, Inc. All Rights Reserved.
  */
 
-package com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto;
+package com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.system;
 
 /**
  * TenantDTO contains tenant details information such as : id, name, type, deviceCount, memberCount

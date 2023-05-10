@@ -4,6 +4,9 @@
 
 package com.avispl.symphony.dal.infrastructure.management.polycom.lens.common;
 
+import java.util.Arrays;
+import java.util.Optional;
+
 /**
  * PolyLensProperties contain properties name and properties command
  *
@@ -13,6 +16,8 @@ package com.avispl.symphony.dal.infrastructure.management.polycom.lens.common;
  */
 public enum PolyLensProperties {
 	SYSTEM_INFO(PolyLensConstant.SYSTEM_INFO, PolyLensQueries.SYSTEM_INFO, false),
+	AGGREGATED_DEVICES(PolyLensConstant.AGGREGATED_DEVICES, PolyLensQueries.AGGREGATED_DEVICES, false),
+	REBOOT_DEVICE(PolyLensConstant.REBOOT_DEVICE, PolyLensQueries.REBOOT_DEVICE, true),
 	;
 	private final String name;
 	private final String command;
@@ -56,5 +61,14 @@ public enum PolyLensProperties {
 	 */
 	public boolean isControl() {
 		return isControl;
+	}
+
+	public static PolyLensProperties getByName(String name) {
+		Optional<PolyLensProperties> property = Arrays.stream(PolyLensProperties.values()).filter(group -> group.getName().equals(name)).findFirst();
+		if (property.isPresent()) {
+			return property.get();
+		} else {
+			throw new IllegalStateException(String.format("control group %s is not supported.", name));
+		}
 	}
 }
