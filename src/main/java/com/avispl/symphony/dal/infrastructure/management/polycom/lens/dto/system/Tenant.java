@@ -15,7 +15,6 @@ public class Tenant {
 	private String id;
 	private String name;
 	private String type;
-	private Integer deviceCount;
 	private Integer memberCount;
 
 	/**
@@ -70,24 +69,6 @@ public class Tenant {
 	 */
 	public void setType(String type) {
 		this.type = type;
-	}
-
-	/**
-	 * Retrieves {@code {@link #deviceCount}}
-	 *
-	 * @return value of {@link #deviceCount}
-	 */
-	public Integer getDeviceCount() {
-		return deviceCount;
-	}
-
-	/**
-	 * Sets {@code deviceCount}
-	 *
-	 * @param deviceCount the {@code java.lang.String} field
-	 */
-	public void setDeviceCount(Integer deviceCount) {
-		this.deviceCount = deviceCount;
 	}
 
 	/**
