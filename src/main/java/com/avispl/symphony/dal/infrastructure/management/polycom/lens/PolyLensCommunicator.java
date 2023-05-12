@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -29,7 +30,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
@@ -46,6 +53,7 @@ import com.avispl.symphony.dal.aggregator.parser.PropertiesMappingParser;
 import com.avispl.symphony.dal.communicator.RestCommunicator;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensAggregatedMetric;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensConstant;
+import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensFilteringMetric;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensProperties;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensSystemInfoMetric;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.Connection;
@@ -201,6 +209,26 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
+	 * filter by room field
+	 */
+	private String filterRoomName = PolyLensConstant.EMPTY;
+
+	/**
+	 * filter by site field
+	 */
+	private String filterSiteName = PolyLensConstant.EMPTY;
+
+	/**
+	 * filter by model field
+	 */
+	private String filterModelName = PolyLensConstant.EMPTY;
+
+	/**
+	 * filter logic NOT by room field
+	 */
+	private String filterRoomNameNotIn = PolyLensConstant.EMPTY;
+
+	/**
 	 * number of devices obtained in 1 request
 	 */
 	private int pageSize = PolyLensConstant.NUMBER_OF_DEVICES;
@@ -212,13 +240,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 */
 	private final ReentrantLock reentrantLock = new ReentrantLock();
 
-
 	/**
 	 * A class-level constant instance of JsonNodeFactory, which is a factory class for creating JsonNode instances.
 	 * This instance provides a default configuration of the factory with which to create new nodes.
 	 */
 	static JsonNodeFactory jsonNodeFactory = JsonNodeFactory.instance;
-
 
 	/**
 	 * A mapper for reading and writing JSON using Jackson library.
@@ -226,7 +252,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * It can be used to serialize objects to JSON format, and deserialize JSON data to objects.
 	 */
 	ObjectMapper objectMapper = new ObjectMapper();
-
 
 	/**
 	 * An instance of the AggregatedDeviceProcessor class used to process and aggregate device-related data.
@@ -251,7 +276,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	/**
 	 * time the token expires
 	 */
-	private Long expiresIn;
+	private Long expiresIn = 84600L * 1000;
 
 	/**
 	 * save nextToken for next request
@@ -304,6 +329,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	private ExecutorService executorService;
 
 	/**
+	 * SSL certificate
+	 */
+	private SSLContext sslContext;
+
+	/**
 	 * Update the status of the device.
 	 * The device is considered as paused if did not receive any retrieveMultipleStatistics()
 	 * calls during {@link PolyLensCommunicator}
@@ -329,6 +359,78 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * List of System Response
 	 */
 	private SystemInformation systemInformation = new SystemInformation();
+
+	/**
+	 * Retrieves {@code {@link #filterRoomNameNotIn }}
+	 *
+	 * @return value of {@link #filterRoomNameNotIn}
+	 */
+	public String getFilterRoomNameNotIn() {
+		return filterRoomNameNotIn;
+	}
+
+	/**
+	 * Sets {@code filterNotRoom}
+	 *
+	 * @param filterRoomNameNotIn the {@code java.lang.String} field
+	 */
+	public void setFilterRoomNameNotIn(String filterRoomNameNotIn) {
+		this.filterRoomNameNotIn = filterRoomNameNotIn;
+	}
+
+	/**
+	 * Retrieves {@code {@link #filterRoomName }}
+	 *
+	 * @return value of {@link #filterRoomName}
+	 */
+	public String getFilterRoomName() {
+		return filterRoomName;
+	}
+
+	/**
+	 * Sets {@code filterRoom}
+	 *
+	 * @param filterRoomName the {@code java.lang.String} field
+	 */
+	public void setFilterRoomName(String filterRoomName) {
+		this.filterRoomName = filterRoomName;
+	}
+
+	/**
+	 * Retrieves {@code {@link #filterSiteName }}
+	 *
+	 * @return value of {@link #filterSiteName}
+	 */
+	public String getFilterSiteName() {
+		return filterSiteName;
+	}
+
+	/**
+	 * Sets {@code filterSite}
+	 *
+	 * @param filterSiteName the {@code java.lang.String} field
+	 */
+	public void setFilterSiteName(String filterSiteName) {
+		this.filterSiteName = filterSiteName;
+	}
+
+	/**
+	 * Retrieves {@code {@link #filterModelName }}
+	 *
+	 * @return value of {@link #filterModelName}
+	 */
+	public String getFilterModelName() {
+		return filterModelName;
+	}
+
+	/**
+	 * Sets {@code filterModel}
+	 *
+	 * @param filterModelName the {@code java.lang.String} field
+	 */
+	public void setFilterModelName(String filterModelName) {
+		this.filterModelName = filterModelName;
+	}
 
 	/**
 	 * Retrieves {@code {@link #pageSize}}
@@ -357,6 +459,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	public PolyLensCommunicator() throws IOException {
 		Map<String, PropertiesMapping> mapping = new PropertiesMappingParser().loadYML(PolyLensConstant.MODEL_MAPPING_AGGREGATED_DEVICE, getClass());
 		aggregatedDeviceProcessor = new AggregatedDeviceProcessor(mapping);
+		this.setTrustAllCertificates(true);
 	}
 
 	/**
@@ -492,6 +595,26 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		}
 		executorService = Executors.newFixedThreadPool(1);
 		executorService.submit(deviceDataLoader = new PolyLensDataLoader());
+
+		// Create a trust manager that trusts all certificates
+		TrustManager[] trustAllCerts = new TrustManager[] {
+				new X509TrustManager() {
+					public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+						return new java.security.cert.X509Certificate[] {};
+					}
+
+					public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+					}
+
+					public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+					}
+				}
+		};
+
+		// Install the all-trusting trust manager
+		this.sslContext = SSLContext.getInstance(PolyLensConstant.SSL);
+		this.sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+		HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
 		super.internalInit();
 	}
 
@@ -761,6 +884,12 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 						}
 					}
 					break;
+				case ROOM_NAME:
+					newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.NOT_SET : oldStats.get(name));
+					break;
+				case SITE_NAME:
+					newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.UNKNOWN : oldStats.get(name));
+					break;
 				case HAS_PERIPHERALS:
 				case PROVISIONING_ENABLED:
 				case SUPPORTS_SETTINGS:
@@ -833,7 +962,73 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @return variables node
 	 */
 	private String createVariableForFiltering() {
-		return null;
+		ObjectNode filterNode = jsonNodeFactory.objectNode();
+		ArrayNode andArr = jsonNodeFactory.arrayNode();
+		for (PolyLensFilteringMetric item : PolyLensFilteringMetric.values()) {
+			andArr.add(createNode(getFilterValue(item.getName()), item.getField(), item.getLogic()));
+		}
+		filterNode.putArray(PolyLensConstant.AND).addAll(andArr);
+		ObjectNode paramsNode = jsonNodeFactory.objectNode();
+		paramsNode.put(PolyLensConstant.PAGE_SIZE, pageSize);
+		paramsNode.set(PolyLensConstant.NEXT_TOKEN, null);
+		paramsNode.set(PolyLensConstant.FILTER, filterNode);
+
+		ObjectNode variableNode = jsonNodeFactory.objectNode();
+		variableNode.set(PolyLensConstant.PARAMS, paramsNode);
+
+		String jsonString = variableNode.toString();
+		return "\"variables\":" + jsonString;
+	}
+
+	/**
+	 * get filter value by filter name
+	 *
+	 * @param name name of filter
+	 * @return input value of filter
+	 */
+	private String getFilterValue(String name) {
+		switch (name) {
+			case PolyLensConstant.FILTER_MODEL:
+				return filterModelName;
+			case PolyLensConstant.FILTER_ROOM:
+				return filterRoomName;
+			case PolyLensConstant.FILTER_SITE:
+				return filterSiteName;
+			case PolyLensConstant.FILTER_NOT_ROOM:
+				return filterRoomNameNotIn;
+		}
+		return PolyLensConstant.EMPTY;
+	}
+
+	/**
+	 * create nodes for variables node
+	 *
+	 * @param input input value of filtering
+	 * @param name name of filtering
+	 * @param logic OR, NOT, AND
+	 */
+	private ObjectNode createNode(String input, String name, String logic) {
+		ObjectNode root = jsonNodeFactory.objectNode();
+		List<String> arrayValueFiltering = Arrays.asList(input.split(PolyLensConstant.COMMA));
+		if (arrayValueFiltering.isEmpty()) {
+			arrayValueFiltering.add(PolyLensConstant.EMPTY);
+		}
+		ArrayNode logicNode = jsonNodeFactory.arrayNode();
+
+		for (String value : arrayValueFiltering) {
+			ObjectNode node = jsonNodeFactory.objectNode();
+
+			if (PolyLensConstant.NOT_SET.equals(value) || PolyLensConstant.UNKNOWN.equals(value)) {
+				node.put(PolyLensConstant.EXISTS, false);
+			} else {
+				node.put(PolyLensConstant.EQ, value);
+			}
+			node.put(PolyLensConstant.FIELD, name);
+			logicNode.add(node);
+		}
+		root.putArray(logic).addAll(logicNode);
+
+		return root;
 	}
 
 	/**

@@ -56,6 +56,12 @@ public enum PolyLensAggregatedMetric {
 	;
 	private final String name;
 
+	/**
+	 * Represents an aggregated metric in the PolyLens system.
+	 * This class is used to store the name of the metric.
+	 *
+	 * @param name the name of the aggregated metric
+	 */
 	PolyLensAggregatedMetric(String name) {
 		this.name = name;
 	}

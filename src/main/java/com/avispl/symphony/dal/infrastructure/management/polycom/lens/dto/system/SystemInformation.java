@@ -24,9 +24,6 @@ import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.Pol
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SystemInformation {
 	private Integer countDevices;
-	private String gatewayId;
-	@JsonProperty("getMyIp")
-	private MyIP myIP;
 	private Integer tenantCount;
 
 	@JsonProperty("calculateQueryCost")
@@ -52,42 +49,6 @@ public class SystemInformation {
 	 */
 	public void setCountDevices(Integer countDevices) {
 		this.countDevices = countDevices;
-	}
-
-	/**
-	 * Retrieves {@code {@link #gatewayId}}
-	 *
-	 * @return value of {@link #gatewayId}
-	 */
-	public String getGatewayId() {
-		return gatewayId;
-	}
-
-	/**
-	 * Sets {@code gatewayId}
-	 *
-	 * @param gatewayId the {@code java.lang.String} field
-	 */
-	public void setGatewayId(String gatewayId) {
-		this.gatewayId = gatewayId;
-	}
-
-	/**
-	 * Retrieves {@code {@link #myIP}}
-	 *
-	 * @return value of {@link #myIP}
-	 */
-	public MyIP getMyIP() {
-		return myIP;
-	}
-
-	/**
-	 * Sets {@code myIP}
-	 *
-	 * @param myIP the {@code com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.system.MyIP} field
-	 */
-	public void setMyIP(MyIP myIP) {
-		this.myIP = myIP;
 	}
 
 	/**
@@ -165,14 +126,6 @@ public class SystemInformation {
 			case COUNT_DEVICES:
 				result = String.valueOf(this.getCountDevices());
 				break;
-			case GATE_WAY_ID:
-				result = this.getGatewayId();
-				break;
-			case IP:
-				if (this.getMyIP() != null) {
-					result = this.getMyIP().getIp();
-				}
-				break;
 			case TENANT_COUNT:
 				result = String.valueOf(this.getTenantCount());
 				break;
@@ -196,9 +149,6 @@ public class SystemInformation {
 				break;
 			case TENANT_TYPE:
 				result = String.valueOf(this.getTenants().get(0).getType());
-				break;
-			case TENANT_DEVICE_COUNT:
-				result = String.valueOf(this.getTenants().get(0).getDeviceCount());
 				break;
 			case TENANT_MEMBER_COUNT:
 				result = String.valueOf(this.getTenants().get(0).getMemberCount());

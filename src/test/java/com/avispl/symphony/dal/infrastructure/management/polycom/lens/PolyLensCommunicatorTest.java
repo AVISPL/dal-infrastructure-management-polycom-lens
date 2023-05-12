@@ -54,13 +54,13 @@ class PolyLensCommunicatorTest {
 	void testGetAggregatorData() {
 		extendedStatistic = (ExtendedStatistics) polyLensCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> statistics = extendedStatistic.getStatistics();
-		Assert.assertEquals(13, statistics.size());
+		Assert.assertEquals(10, statistics.size());
 		Assert.assertEquals("1", statistics.get(PolyLensConstant.TENANT_COUNT));
 		Assert.assertEquals("AVI-SPL Lab", statistics.get(PolyLensConstant.TENANT_NAME));
 		Assert.assertEquals("24", statistics.get(PolyLensConstant.TENANT_MEMBER_COUNT));
 		Assert.assertEquals("ENTERPRISE", statistics.get(PolyLensConstant.TENANT_TYPE));
 		Assert.assertEquals("b0a59055-8875-4f44-a88a-0b114be771b9", statistics.get(PolyLensConstant.TENANT_ID));
-		Assert.assertEquals("42", statistics.get(PolyLensConstant.COUNT_DEVICES));
+		Assert.assertEquals("45", statistics.get(PolyLensConstant.COUNT_DEVICES));
 	}
 
 	/**
@@ -73,7 +73,7 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(60000);
 		List<AggregatedDevice> aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
-		Assert.assertEquals(41, aggregatedDeviceList.size());
+		Assert.assertEquals(45, aggregatedDeviceList.size());
 	}
 
 	/**
@@ -91,7 +91,7 @@ class PolyLensCommunicatorTest {
 		Thread.sleep(60000);
 		aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
 		System.out.println(aggregatedDeviceList.size());
-		Assert.assertEquals(41, aggregatedDeviceList.size());
+		Assert.assertEquals(42, aggregatedDeviceList.size());
 	}
 
 	/**
@@ -104,7 +104,7 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
-		Assert.assertEquals(41, aggregatedDeviceList.size());
+		Assert.assertEquals(45, aggregatedDeviceList.size());
 		AggregatedDevice aggregatedDevice = aggregatedDeviceList.get(0);
 		Assert.assertNotNull(aggregatedDevice.getDeviceId());
 		Assert.assertNotNull(aggregatedDevice.getDeviceOnline());
@@ -131,5 +131,56 @@ class PolyLensCommunicatorTest {
 		controllableProperty.setValue(value);
 		controllableProperty.setDeviceId(deviceId);
 		polyLensCommunicator.controlProperty(controllableProperty);
+	}
+
+	/**
+	 * test Filter Room
+	 * @throws Exception
+	 */
+	@Test
+	void testFiltering() throws Exception {
+		polyLensCommunicator.setFilterModelName("");
+		polyLensCommunicator.setFilterRoomName("Lab,Unassigned");
+		polyLensCommunicator.setFilterSiteName("");
+		polyLensCommunicator.setFilterRoomNameNotIn("");
+		polyLensCommunicator.getMultipleStatistics();
+		polyLensCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
+		Assert.assertEquals(9, aggregatedDeviceList.size());
+	}
+
+	/**
+	 * test Filter With multi field
+	 * @throws Exception
+	 */
+	@Test
+	void testFilteringWithMultiField() throws Exception {
+		polyLensCommunicator.setFilterModelName("Lens Desktop,Lens Mobile");
+		polyLensCommunicator.setFilterRoomName("");
+		polyLensCommunicator.setFilterSiteName("USA - OH - Broadview Heights,USA - OH - Brecksville");
+		polyLensCommunicator.setFilterRoomNameNotIn("");
+		polyLensCommunicator.getMultipleStatistics();
+		polyLensCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
+		Assert.assertEquals(3, aggregatedDeviceList.size());
+	}
+
+	/**
+	 * test Filter With multi field
+	 * @throws Exception
+	 */
+	@Test
+	void testFilterNotRoom() throws Exception {
+		polyLensCommunicator.setFilterModelName("Lens Desktop");
+		polyLensCommunicator.setFilterRoomName("");
+		polyLensCommunicator.setFilterSiteName("");
+		polyLensCommunicator.setFilterRoomNameNotIn("Not Set");
+		polyLensCommunicator.getMultipleStatistics();
+		polyLensCommunicator.retrieveMultipleStatistics();
+		Thread.sleep(30000);
+		List<AggregatedDevice> aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
+		Assert.assertEquals(4, aggregatedDeviceList.size());
 	}
 }
