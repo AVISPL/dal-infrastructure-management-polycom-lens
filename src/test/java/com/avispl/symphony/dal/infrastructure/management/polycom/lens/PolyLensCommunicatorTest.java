@@ -96,7 +96,6 @@ class PolyLensCommunicatorTest {
 
 	/**
 	 * test get info of aggregated device
-	 * @throws Exception
 	 */
 	@Test
 	void testMonitoringForAggregatedDevice() throws Exception {
@@ -115,7 +114,6 @@ class PolyLensCommunicatorTest {
 
 	/**
 	 * test reboot device
-	 * @throws Exception
 	 */
 	@Test
 	void testRebootDevice() throws Exception {
@@ -135,7 +133,6 @@ class PolyLensCommunicatorTest {
 
 	/**
 	 * test Filter Room
-	 * @throws Exception
 	 */
 	@Test
 	void testFiltering() throws Exception {
@@ -152,7 +149,6 @@ class PolyLensCommunicatorTest {
 
 	/**
 	 * test Filter With multi field
-	 * @throws Exception
 	 */
 	@Test
 	void testFilteringWithMultiField() throws Exception {
@@ -169,11 +165,10 @@ class PolyLensCommunicatorTest {
 
 	/**
 	 * test Filter With multi field
-	 * @throws Exception
 	 */
 	@Test
 	void testFilterNotRoom() throws Exception {
-		polyLensCommunicator.setFilterModelName("Lens Desktop");
+		polyLensCommunicator.setFilterModelName("Lens Desktop,Studio USB");
 		polyLensCommunicator.setFilterRoomName("");
 		polyLensCommunicator.setFilterSiteName("");
 		polyLensCommunicator.setFilterRoomNameNotIn("Not Set");
@@ -181,6 +176,6 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
 		List<AggregatedDevice> aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
-		Assert.assertEquals(4, aggregatedDeviceList.size());
+		Assert.assertEquals(7, aggregatedDeviceList.size());
 	}
 }
