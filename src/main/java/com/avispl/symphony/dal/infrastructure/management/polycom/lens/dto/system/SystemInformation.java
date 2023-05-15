@@ -30,6 +30,9 @@ public class SystemInformation {
 	private QueryCost queryCost;
 	private List<Tenant> tenants;
 
+	/**
+	 * Constructs a new SystemInformation object.
+	 */
 	public SystemInformation() {
 	}
 
@@ -107,8 +110,10 @@ public class SystemInformation {
 
 
 	/**
-	 * @param name a
-	 * @return a
+	 * Returns the value associated with the given PolyLensSystemInfoMetric.
+	 *
+	 * @param name The PolyLensSystemInfoMetric indicating the desired metric value.
+	 * @return The value of the specified metric as a String.
 	 */
 	public String getValueByMetricName(PolyLensSystemInfoMetric name) {
 		String result = PolyLensConstant.NONE;

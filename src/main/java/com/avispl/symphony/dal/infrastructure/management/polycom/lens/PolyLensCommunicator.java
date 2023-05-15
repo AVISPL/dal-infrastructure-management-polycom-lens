@@ -77,7 +77,7 @@ import com.avispl.symphony.dal.util.StringUtils;
  * <li> - user</li>
  * <li> - name</li>
  * <li> - tenantId</li>
- * <li> - productid</li>
+ * <li> - productId</li>
  * <li> - organization</li>
  * <li> - site</li>
  * <li> - room</li>
@@ -825,7 +825,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LONGITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LONGITUDE)));
 					break;
 				case BANDWIDTH:
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.END_TIME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME)));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.END_TIME, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME))));
 					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.DOWNLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_DOWNLOAD_MBPS)));
 					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_JITTER, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_JITTER_MS)));
 					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.UPLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_UPLOAD_MBPS)));
@@ -864,9 +864,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, PolyLensConstant.NONE);
 					} else if (entitlementList.size() == 1) {
 						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, getDefaultValueForNullData(entitlementList.get(0).getLicenseKey()));
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, getDefaultValueForNullData(entitlementList.get(0).getDate()));
+						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getDate())));
 						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, getDefaultValueForNullData(entitlementList.get(0).getExpired()));
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, getDefaultValueForNullData(entitlementList.get(0).getEndDate()));
+						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getEndDate())));
 						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, getDefaultValueForNullData(entitlementList.get(0).getProductSerial()));
 					} else {
 						for (int i = 0; i < entitlementList.size(); i++) {
@@ -874,11 +874,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY,
 									getDefaultValueForNullData(entitlementList.get(i).getLicenseKey()));
 							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_DATE,
-									getDefaultValueForNullData(entitlementList.get(i).getDate()));
+									convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getDate())));
 							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_EXPIRED,
 									getDefaultValueForNullData(entitlementList.get(i).getExpired()));
 							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_END_DATE,
-									getDefaultValueForNullData(entitlementList.get(i).getEndDate()));
+									convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getEndDate())));
 							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL,
 									getDefaultValueForNullData(entitlementList.get(i).getProductSerial()));
 						}
@@ -996,8 +996,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				return filterSiteName;
 			case PolyLensConstant.FILTER_NOT_ROOM:
 				return filterRoomNameNotIn;
+			default:
+				return PolyLensConstant.EMPTY;
 		}
-		return PolyLensConstant.EMPTY;
 	}
 
 	/**
