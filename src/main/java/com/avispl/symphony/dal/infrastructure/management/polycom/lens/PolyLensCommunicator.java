@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -135,6 +134,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	class PolyLensDataLoader implements Runnable {
 		private volatile boolean inProgress;
 		private volatile int threadIndex = 0;
+		private volatile int pollingIntervalValue = 1;
 
 		public PolyLensDataLoader() {
 			inProgress = true;
@@ -167,7 +167,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					threadIndex++;
 					populateDeviceDetails();
 					try {
-						Thread.sleep(5000);
+						Thread.sleep(2000);
 					} catch (InterruptedException e) {
 						throw new RuntimeException(e);
 					}
@@ -191,7 +191,18 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				}
 				if (threadIndex == threadCount) {
 					threadIndex = 0;
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
+					if (PolyLensConstant.NULL.equals(nextToken)) {
+						try {
+							if (StringUtils.isNotNullOrEmpty(pollingInterval)) {
+								pollingIntervalValue = Integer.parseInt(pollingInterval);
+							}
+							nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + pollingIntervalValue * 60 * 1000;
+						} catch (Exception e) {
+							throw new IllegalArgumentException(String.format("Unexpected pollingInterval value: %s", pollingInterval));
+						}
+					} else {
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
+					}
 				}
 
 				if (logger.isDebugEnabled()) {
@@ -228,6 +239,12 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * filter logic NOT by room field
 	 */
 	private String filterRoomNameNotIn;
+
+	/**
+	 * Retrieves the polling interval.
+	 * This method returns the value of the polling interval, which represents the time interval between each polling action.
+	 */
+	private String pollingInterval;
 
 	/**
 	 * number of devices obtained in 1 request
@@ -714,9 +731,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 */
 	private String getToken() {
 		String token;
-		String client_id = this.getLogin();
-		String client_secret = this.getPassword();
-		String body = "{\"client_id\":\"" + client_id + "\",\"client_secret\":\"" + client_secret + "\",\"grant_type\":\"" + PolyLensConstant.GRANT_TYPE + "\"}";
+		String body = "{\"client_id\":\"" + this.getLogin() + "\",\"client_secret\":\"" + this.getPassword() + "\",\"grant_type\":\"" + PolyLensConstant.GRANT_TYPE + "\"}";
 		try {
 			JsonNode response = doPost(PolyLensConstant.URL_GET_TOKEN, body, JsonNode.class);
 			if (response.size() == 1) {
@@ -750,7 +765,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * populate detail aggregated device
 	 * add aggregated device into aggregated device list
 	 */
-	public void populateDeviceDetails() {
+	private void populateDeviceDetails() {
 		try {
 			String query = PolyLensProperties.AGGREGATED_DEVICES.getCommand();
 			query = query.replace(PolyLensConstant.VARIABLES, createVariableForFiltering());
@@ -834,122 +849,148 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		List<Connection> connectionList;
 		List<Entitlement> entitlementList;
 		String group;
-		try {
-			for (PolyLensAggregatedMetric property : PolyLensAggregatedMetric.values()) {
-				String name = property.getName();
-				switch (property) {
-					case MODEL:
-						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_NAME)));
-						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.DESCRIPTION, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_DESCRIPTION)));
-						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_FAMILY_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_FAMILY_NAME)));
-						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_MANUFACTURER_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_MANUFACTURER_NAME)));
-						break;
-					case SYSTEM_STATUS:
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.PROVISIONING_STATE,
-								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.GLOBAL_DIRECTORY_STATE,
-								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY_STATE))));
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.IP_NETWORK_STATE,
-								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IP_NETWORK_STATE))));
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.TRACKABLE_CAMERA_STATE,
-								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLE_CAMERA_STATE))));
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.CAMERA_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.AUDIO_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.REMOTE_CONTROL_STATE,
-								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL_STATE))));
-						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.LOG_THRESHOLD_STATE,
-								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD_STATE))));
-						break;
-					case LOCATION:
-						newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LATITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
-						newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LONGITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LONGITUDE)));
-						break;
-					case BANDWIDTH:
-						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.END_TIME, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME))));
-						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.DOWNLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_DOWNLOAD_MBPS)));
-						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_JITTER, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_JITTER_MS)));
-						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.UPLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_UPLOAD_MBPS)));
-						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.LATENCY, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LATENCY_MS)));
-						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_LOSS_PERCENT, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LOSS_PERCENT)));
-						break;
-					case CONNECTIONS:
+		for (PolyLensAggregatedMetric property : PolyLensAggregatedMetric.values()) {
+			String name = property.getName();
+			switch (property) {
+				case MODEL:
+					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_NAME)));
+					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.DESCRIPTION, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_DESCRIPTION)));
+					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_FAMILY_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_FAMILY_NAME)));
+					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_MANUFACTURER_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_MANUFACTURER_NAME)));
+					break;
+				case SYSTEM_STATUS:
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.PROVISIONING_STATE,
+							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.GLOBAL_DIRECTORY_STATE,
+							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.IP_NETWORK_STATE,
+							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IP_NETWORK_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.TRACKABLE_CAMERA_STATE,
+							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLE_CAMERA_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.CAMERA_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.AUDIO_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.REMOTE_CONTROL_STATE,
+							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.LOG_THRESHOLD_STATE,
+							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD_STATE))));
+					break;
+				case LOCATION:
+					newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LATITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
+					newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LONGITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LONGITUDE)));
+					break;
+				case BANDWIDTH:
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.END_TIME, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME))));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.DOWNLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_DOWNLOAD_MBPS)));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_JITTER, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_JITTER_MS)));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.UPLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_UPLOAD_MBPS)));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.LATENCY, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LATENCY_MS)));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_LOSS_PERCENT, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LOSS_PERCENT)));
+					break;
+				case CONNECTIONS:
+					try {
 						connectionList = objectMapper.readValue(connections, new TypeReference<List<Connection>>() {
 						});
 						if (connectionList.isEmpty()) {
-							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, PolyLensConstant.NONE);
-							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, PolyLensConstant.NONE);
-							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, PolyLensConstant.NONE);
-						} else if (connectionList.size() == 1) {
-							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(connectionList.get(0).getName()));
-							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, getDefaultValueForNullData(connectionList.get(0).getMacAddress()));
-							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, getDefaultValueForNullData(connectionList.get(0).getSoftwareVersion()));
+							populateNoneDataForConnectionGroup(newProperties);
 						} else {
 							for (int i = 0; i < connectionList.size(); i++) {
-								group = PolyLensConstant.CONNECTION + (connectionList.size() < 10 ? PolyLensConstant.ZERO : PolyLensConstant.EMPTY) + (i + 1);
+								group = PolyLensConstant.CONNECTION + formatOrderNumber(i, connectionList.size());
 								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.NAME, getDefaultValueForNullData(connectionList.get(i).getName()));
 								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.MAC, getDefaultValueForNullData(connectionList.get(i).getMacAddress()));
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.SOFTWARE_VERSION,
-										getDefaultValueForNullData(connectionList.get(i).getSoftwareVersion()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.SOFTWARE_VERSION, getDefaultValueForNullData(connectionList.get(i).getSoftwareVersion()));
 							}
 						}
-						break;
-					case ENTITLEMENTS:
+					} catch (Exception e) {
+						populateNoneDataForConnectionGroup(newProperties);
+					}
+					break;
+				case ENTITLEMENTS:
+					try {
 						entitlementList = objectMapper.readValue(entitlements, new TypeReference<List<Entitlement>>() {
 						});
 						if (entitlementList.isEmpty()) {
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, PolyLensConstant.NONE);
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, PolyLensConstant.NONE);
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, PolyLensConstant.NONE);
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, PolyLensConstant.NONE);
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, PolyLensConstant.NONE);
-						} else if (entitlementList.size() == 1) {
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, getDefaultValueForNullData(entitlementList.get(0).getLicenseKey()));
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getDate())));
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, getDefaultValueForNullData(entitlementList.get(0).getExpired()));
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getEndDate())));
-							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, getDefaultValueForNullData(entitlementList.get(0).getProductSerial()));
+							populateNoneDataForEntitlementsGroup(newProperties);
 						} else {
 							for (int i = 0; i < entitlementList.size(); i++) {
-								group = PolyLensConstant.ENTITLEMENTS + (entitlementList.size() < 10 ? PolyLensConstant.ZERO : PolyLensConstant.EMPTY) + (i + 1);
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY,
-										getDefaultValueForNullData(entitlementList.get(i).getLicenseKey()));
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_DATE,
-										convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getDate())));
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_EXPIRED,
-										getDefaultValueForNullData(entitlementList.get(i).getExpired()));
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_END_DATE,
-										convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getEndDate())));
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL,
-										getDefaultValueForNullData(entitlementList.get(i).getProductSerial()));
+								group = PolyLensConstant.ENTITLEMENTS + formatOrderNumber(i, entitlementList.size());
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, getDefaultValueForNullData(entitlementList.get(i).getLicenseKey()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getDate())));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_EXPIRED, getDefaultValueForNullData(entitlementList.get(i).getExpired()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_END_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getEndDate())));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, getDefaultValueForNullData(entitlementList.get(i).getProductSerial()));
 							}
 						}
-						break;
-					case ROOM_NAME:
-						newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.NOT_SET : oldStats.get(name));
-						break;
-					case SITE_NAME:
-						newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.UNKNOWN : oldStats.get(name));
-						break;
-					case HAS_PERIPHERALS:
-					case PROVISIONING_ENABLED:
-					case SUPPORTS_SETTINGS:
-					case SUPPORTS_SOFTWARE_UPDATE:
-					case ALL_PERIPHERALS_LINKS:
-						newProperties.put(name, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(name))));
-						break;
-					case DATE_REGISTERED:
-					case LAST_DETECTED:
-					case LAST_CONFIG_REQUEST_DATE:
-						newProperties.put(name, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(name))));
-						break;
-					default:
-						newProperties.put(name, getDefaultValueForNullData(oldStats.get(name)));
-				}
+					} catch (Exception e) {
+						populateNoneDataForEntitlementsGroup(newProperties);
+					}
+					break;
+				case ROOM_NAME:
+					newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.NOT_SET : oldStats.get(name));
+					break;
+				case SITE_NAME:
+					newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.UNKNOWN : oldStats.get(name));
+					break;
+				case HAS_PERIPHERALS:
+				case PROVISIONING_ENABLED:
+				case SUPPORTS_SETTINGS:
+				case SUPPORTS_SOFTWARE_UPDATE:
+				case ALL_PERIPHERALS_LINKS:
+					newProperties.put(name, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(name))));
+					break;
+				case DATE_REGISTERED:
+				case LAST_DETECTED:
+				case LAST_CONFIG_REQUEST_DATE:
+					newProperties.put(name, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(name))));
+					break;
+				default:
+					newProperties.put(name, getDefaultValueForNullData(oldStats.get(name)));
 			}
-		} catch (Exception e) {
-			throw new IllegalArgumentException("Error while map properties of aggregated device", e);
 		}
 		return newProperties;
+	}
+
+	/**
+	 * This method is used to format order number base on size of maximumNumber
+	 *
+	 * @param index index number
+	 * @return String is format of the input
+	 */
+	private String formatOrderNumber(int index, int size) {
+		if (size == 1) {
+			return PolyLensConstant.EMPTY;
+		}
+		if (index < 10) {
+			return PolyLensConstant.ZERO + (index + 1);
+		}
+		return String.valueOf(index + 1);
+	}
+
+	/**
+	 * Populates none data for the connection group in the given stats map.
+	 * The connection group includes information about the name, MAC address, and software version.
+	 * This method sets the corresponding values in the stats map to "NONE" to indicate that no data is available for these fields.
+	 *
+	 * @param stats The map containing the connection group statistics.
+	 */
+	private void populateNoneDataForConnectionGroup(Map<String, String> stats) {
+		stats.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, PolyLensConstant.NONE);
+	}
+
+	/**
+	 * Populates none data for the entitlements group in the given stats map.
+	 * The entitlements group includes information about license keys, dates, expiration status, end dates, and product serial numbers.
+	 * This method sets the corresponding values in the stats map to "NONE" to indicate that no data is available for these fields.
+	 *
+	 * @param stats The map containing the entitlements group statistics.
+	 */
+	private void populateNoneDataForEntitlementsGroup(Map<String, String> stats) {
+		stats.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, PolyLensConstant.NONE);
 	}
 
 	/**
@@ -996,7 +1037,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		button.setLabel(label);
 		button.setLabelPressed(labelPressed);
 		button.setGracePeriod(gracePeriod);
-		return new AdvancedControllableProperty(name, new Date(), button, "");
+		return new AdvancedControllableProperty(name, new Date(), button, PolyLensConstant.EMPTY);
 	}
 
 	/**
@@ -1015,12 +1056,13 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		paramsNode.put(PolyLensConstant.PAGE_SIZE, pageSize);
 		paramsNode.set(PolyLensConstant.NEXT_TOKEN, null);
 		paramsNode.set(PolyLensConstant.FILTER, filterNode);
+		paramsNode.set(PolyLensConstant.SORT, createSortNode());
 
 		ObjectNode variableNode = jsonNodeFactory.objectNode();
 		variableNode.set(PolyLensConstant.PARAMS, paramsNode);
 
 		String jsonString = variableNode.toString();
-		return "\"variables\":" + jsonString;
+		return PolyLensConstant.VARIABLES_FILTERING + jsonString;
 	}
 
 	/**
@@ -1042,6 +1084,26 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			default:
 				return PolyLensConstant.EMPTY;
 		}
+	}
+
+	/**
+	 * Creates an ObjectNode representing the "sort" field in JSON.
+	 * This method creates an ObjectNode with the structure:
+	 *
+	 * @return The created ObjectNode representing the "sort" field.
+	 */
+	private ObjectNode createSortNode() {
+		ObjectNode sortNode = objectMapper.createObjectNode();
+		ArrayNode fieldsArrayNode = objectMapper.createArrayNode();
+
+		ObjectNode fieldNode = objectMapper.createObjectNode();
+		fieldNode.put(PolyLensConstant.FIELD_NAME, PolyLensConstant.ID);
+		fieldNode.put(PolyLensConstant.DIRECTION, PolyLensConstant.ASC);
+
+		fieldsArrayNode.add(fieldNode);
+
+		sortNode.set(PolyLensConstant.FIELDS, fieldsArrayNode);
+		return sortNode;
 	}
 
 	/**
@@ -1102,15 +1164,15 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			return dateTime;
 		}
 		String outputDateTime = PolyLensConstant.NONE;
-		SimpleDateFormat inputFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
-		inputFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+		SimpleDateFormat inputFormatter = new SimpleDateFormat(PolyLensConstant.DEFAULT_FORMAT_DATETIME, Locale.US);
+		inputFormatter.setTimeZone(TimeZone.getTimeZone(PolyLensConstant.UTC));
 		try {
 			Date date = inputFormatter.parse(dateTime);
 
-			SimpleDateFormat outputFormatter = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.US);
+			SimpleDateFormat outputFormatter = new SimpleDateFormat(PolyLensConstant.NEW_FORMAT_DATETIME, Locale.US);
 			outputDateTime = outputFormatter.format(date);
-		} catch (ParseException e) {
-			e.printStackTrace();
+		} catch (Exception e) {
+			logger.debug("Error when convert format datetime");
 		}
 		return outputDateTime;
 	}

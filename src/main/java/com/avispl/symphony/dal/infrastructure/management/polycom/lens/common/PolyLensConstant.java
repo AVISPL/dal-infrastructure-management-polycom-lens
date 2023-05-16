@@ -141,6 +141,11 @@ public class PolyLensConstant {
 	public static final String EQ ="eq";
 	public static final String FIELD ="field";
 	public static final String EXISTS ="exists";
+	public static final String FIELD_NAME ="name";
+	public static final String SORT ="sort";
+	public static final String DIRECTION ="direction";
+	public static final String FIELDS ="fields";
+	public static final String ASC ="ASC";
 	public static final String AGGREGATED_DEVICES = "AggregatedDevices";
 	public static final String RESTART_DEVICE = "rebootDevice";
 	public static final String SUCCESS = "success";
@@ -160,10 +165,14 @@ public class PolyLensConstant {
 	public static final String NOT_SET = "Not Set";
 	public static final String UNKNOWN = "Unknown";
 	public static final String VARIABLES ="$variables";
+	public static final String VARIABLES_FILTERING ="\"variables\":";
+	public static final String UTC = "UTC";
 	public static final String ZERO ="0";
 	public static final int NUMBER_OF_DEVICES = 99;
 	public static final int ONE_THREAD = 1;
 	public static final int TWO_THREADS = 2;
 	public static final String COMMA =",";
 	public static final String URL_GET_TOKEN = "https://login.silica-prod01.io.lens.poly.com/oauth/token";
+	public static final String DEFAULT_FORMAT_DATETIME = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+	public static final String NEW_FORMAT_DATETIME = "EEE MMM dd HH:mm:ss z yyyy";
 }
