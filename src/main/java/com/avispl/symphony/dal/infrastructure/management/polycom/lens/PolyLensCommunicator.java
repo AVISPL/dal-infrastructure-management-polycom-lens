@@ -139,7 +139,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	class PolyLensDataLoader implements Runnable {
 		private volatile boolean inProgress;
 		private volatile int threadIndex = 0;
-		private volatile int pollingIntervalValue = 1;
 
 		public PolyLensDataLoader() {
 			inProgress = true;
@@ -196,17 +195,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				}
 				if (threadIndex == threadCount) {
 					threadIndex = 0;
+					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
 					if (PolyLensConstant.NULL.equals(nextToken)) {
-						try {
-							if (StringUtils.isNotNullOrEmpty(pollingInterval)) {
-								pollingIntervalValue = Integer.parseInt(pollingInterval);
-							}
-							nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + pollingIntervalValue * 60 * 1000;
-						} catch (Exception e) {
-							throw new IllegalArgumentException(String.format("Unexpected pollingInterval value: %s", pollingInterval));
-						}
-					} else {
-						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + pollingIntervalValue * 60 * 1000;
 					}
 				}
 
@@ -250,6 +241,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * This method returns the value of the polling interval, which represents the time interval between each polling action.
 	 */
 	private String pollingInterval;
+
+	/**
+	 * Retrieves the polling interval value.
+	 */
+	private int pollingIntervalValue;
 
 	/**
 	 * number of devices obtained in 1 request
@@ -469,6 +465,24 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
+	 * Retrieves {@link #pollingInterval}
+	 *
+	 * @return value of {@link #pollingInterval}
+	 */
+	public String getPollingInterval() {
+		return pollingInterval;
+	}
+
+	/**
+	 * Sets {@link #pollingInterval} value
+	 *
+	 * @param pollingInterval new value of {@link #pollingInterval}
+	 */
+	public void setPollingInterval(String pollingInterval) {
+		this.pollingInterval = pollingInterval;
+	}
+
+	/**
 	 * Build instance of Poly LensReflectCommunicator
 	 * Setup aggregated devices processor
 	 *
@@ -491,6 +505,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			if (!checkValidApiToken()) {
 				throw new ResourceNotReachableException("API Token cannot be null or empty, please enter valid API token in the password and username field.");
 			}
+			pollingIntervalValue = getPollingIntervalValue(pollingInterval);
 			Map<String, String> statistics = new HashMap<>();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 			retrieveSystemInfo();
@@ -1180,5 +1195,27 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			logger.debug("Error when convert format datetime");
 		}
 		return outputDateTime;
+	}
+
+	/**
+	 * Retrieves the polling interval value.
+	 * This method parses the provided pollingInterval string and returns the corresponding integer value.
+	 * If the pollingInterval string is null or empty, the default value of 1 will be returned.
+	 * If the parsing of the pollingInterval string fails or an exception occurs, an IllegalArgumentException will be thrown.
+	 *
+	 * @param pollingInterval The polling interval as a string.
+	 * @return The parsed polling interval value as an integer.
+	 * @throws IllegalArgumentException If the pollingInterval value is unexpected or cannot be parsed as an integer.
+	 */
+	private int getPollingIntervalValue(String pollingInterval) {
+		int value = 1;
+		try {
+			if (StringUtils.isNotNullOrEmpty(pollingInterval)) {
+				value = Integer.parseInt(pollingInterval);
+			}
+		} catch (Exception e) {
+			throw new IllegalArgumentException(String.format("Unexpected pollingInterval value: %s", pollingInterval));
+		}
+		return value;
 	}
 }
