@@ -63,6 +63,13 @@ public enum PolyLensProperties {
 		return isControl;
 	}
 
+	/**
+	 * Returns the {@link PolyLensProperties} enum constant with the specified name.
+	 *
+	 * @param name the name of the PolyLensProperties constant to retrieve
+	 * @return the PolyLensProperties constant with the specified name
+	 * @throws IllegalStateException if no constant with the specified name is found
+	 */
 	public static PolyLensProperties getByName(String name) {
 		Optional<PolyLensProperties> property = Arrays.stream(PolyLensProperties.values()).filter(group -> group.getName().equals(name)).findFirst();
 		if (property.isPresent()) {

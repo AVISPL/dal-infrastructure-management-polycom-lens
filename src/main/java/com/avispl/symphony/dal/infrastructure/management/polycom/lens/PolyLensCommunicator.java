@@ -3,8 +3,10 @@
  */
 package com.avispl.symphony.dal.infrastructure.management.polycom.lens;
 
-
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -26,7 +28,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.util.CollectionUtils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -211,22 +212,22 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	/**
 	 * filter by room field
 	 */
-	private String filterRoomName = PolyLensConstant.EMPTY;
+	private String filterRoomName;
 
 	/**
 	 * filter by site field
 	 */
-	private String filterSiteName = PolyLensConstant.EMPTY;
+	private String filterSiteName;
 
 	/**
 	 * filter by model field
 	 */
-	private String filterModelName = PolyLensConstant.EMPTY;
+	private String filterModelName;
 
 	/**
 	 * filter logic NOT by room field
 	 */
-	private String filterRoomNameNotIn = PolyLensConstant.EMPTY;
+	private String filterRoomNameNotIn;
 
 	/**
 	 * number of devices obtained in 1 request
@@ -262,11 +263,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * A private field that represents an instance of the PolyLensDataLoader class, which is responsible for loading device data for PolyLens.
 	 */
 	private PolyLensDataLoader deviceDataLoader;
-
-	/**
-	 * URL to get token
-	 */
-	private String loginHost = PolyLensConstant.URL_GET_TOKEN;
 
 	/**
 	 * save time get token
@@ -567,12 +563,57 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 
 	/**
 	 * {@inheritDoc}
+	 * <p>
+	 *
+	 * Check for available devices before retrieving the value
+	 * ping latency information to Symphony
+	 */
+	@Override
+	public int ping() throws Exception {
+		if (isInitialized()) {
+			long pingResultTotal = 0L;
+
+			for (int i = 0; i < this.getPingAttempts(); i++) {
+				long startTime = System.currentTimeMillis();
+
+				try (Socket puSocketConnection = new Socket(this.host, this.getPort())) {
+					puSocketConnection.setSoTimeout(this.getPingTimeout());
+					if (puSocketConnection.isConnected()) {
+						long pingResult = System.currentTimeMillis() - startTime;
+						pingResultTotal += pingResult;
+						if (this.logger.isTraceEnabled()) {
+							this.logger.trace(String.format("PING OK: Attempt #%s to connect to %s on port %s succeeded in %s ms", i + 1, host, this.getPort(), pingResult));
+						}
+					} else {
+						if (this.logger.isDebugEnabled()) {
+							this.logger.debug(String.format("PING DISCONNECTED: Connection to %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
+						}
+						return this.getPingTimeout();
+					}
+				} catch (SocketTimeoutException | ConnectException tex) {
+					if (this.logger.isDebugEnabled()) {
+						this.logger.error(String.format("PING TIMEOUT: Connection to %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
+					}
+					throw new SocketTimeoutException("Connection timed out");
+				} catch (Exception e) {
+					if (this.logger.isDebugEnabled()) {
+						this.logger.error(String.format("PING TIMEOUT: Connection to %s did not succeed, UNKNOWN ERROR %s: ", host, e.getMessage()));
+					}
+					return this.getPingTimeout();
+				}
+			}
+			return Math.max(1, Math.toIntExact(pingResultTotal / this.getPingAttempts()));
+		} else {
+			throw new IllegalStateException("Cannot use device class without calling init() first");
+		}
+	}
+
+	/**
+	 * {@inheritDoc}
 	 */
 	@Override
 	protected void authenticate() {
-		/**
-		 * TODO
-		 */
+		// Poly lens only require API token for each request.
 	}
 
 	/**
@@ -677,7 +718,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		String client_secret = this.getPassword();
 		String body = "{\"client_id\":\"" + client_id + "\",\"client_secret\":\"" + client_secret + "\",\"grant_type\":\"" + PolyLensConstant.GRANT_TYPE + "\"}";
 		try {
-			JsonNode response = doPost(loginHost, body, JsonNode.class);
+			JsonNode response = doPost(PolyLensConstant.URL_GET_TOKEN, body, JsonNode.class);
 			if (response.size() == 1) {
 				throw new IllegalArgumentException("ClientId and ClientSecret are not correct");
 			}
@@ -685,7 +726,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			token = response.get(PolyLensConstant.ACCESS_TOKEN).asText();
 			expiresIn = (response.get(PolyLensConstant.EXPIRES_IN).asLong() - 1800) * 1000;
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new ResourceNotReachableException("Can't get token from client id and client secret", e);
 		}
 		return token;
 	}
@@ -696,6 +737,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	private void retrieveSystemInfo() {
 		try {
 			JsonNode systemResponse = this.doPost(PolyLensConstant.URI_POLY_LENS, PolyLensProperties.SYSTEM_INFO.getCommand(), JsonNode.class);
+			if (systemResponse == null) {
+				throw new ResourceNotReachableException("Error when get system information");
+			}
 			systemInformation = objectMapper.treeToValue(systemResponse.get(PolyLensConstant.DATA), SystemInformation.class);
 		} catch (Exception e) {
 			throw new ResourceNotReachableException("Error when get system information", e);
@@ -723,12 +767,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				aggregatedDeviceList.removeIf(item -> item.getDeviceId().equals(id));
 				aggregatedDeviceList.addAll(aggregatedDeviceProcessor.extractDevices(node));
 			}
-
-			if (logger.isDebugEnabled()) {
-				logger.debug(String.format("New fetched aggregated device list: %s", aggregatedDeviceList));
-			}
 		} catch (Exception e) {
-			logger.error("Aggregated Device Data Retrieval - Error with cause", e);
+			logger.error("Error while populate aggregated device", e);
 		}
 	}
 
@@ -748,17 +788,16 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				newClonedAggregatedDevice.setDeviceName(aggregatedDevice.getDeviceName());
 				newClonedAggregatedDevice.setSerialNumber(aggregatedDevice.getSerialNumber());
 				newClonedAggregatedDevice.setDeviceOnline(aggregatedDevice.getDeviceOnline());
+				newClonedAggregatedDevice.setType(aggregatedDevice.getType());
+				newClonedAggregatedDevice.setCategory(aggregatedDevice.getCategory());
+				newClonedAggregatedDevice.setDeviceMake(aggregatedDevice.getDeviceMake());
 
 				Map<String, String> oldStats = aggregatedDevice.getProperties();
 				List<AdvancedControllableProperty> controllableProperties = aggregatedDevice.getControllableProperties();
 				Map<String, String> newProperties;
-				try {
-					newProperties = mapMonitoringProperty(oldStats);
-					if (newClonedAggregatedDevice.getDeviceOnline()) {
-						createControl(controllableProperties, newProperties);
-					}
-				} catch (JsonProcessingException e) {
-					throw new RuntimeException(e);
+				newProperties = mapMonitoringProperty(oldStats);
+				if (newClonedAggregatedDevice.getDeviceOnline()) {
+					createControl(controllableProperties, newProperties);
 				}
 
 				newClonedAggregatedDevice.setProperties(newProperties);
@@ -776,10 +815,10 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @param stats stats of aggregated device
 	 */
 	private void createControl(List<AdvancedControllableProperty> controllableProperties, Map<String, String> stats) {
+		stats.put(PolyLensConstant.REBOOT_DEVICE, PolyLensConstant.EMPTY);
 		AdvancedControllableProperty restartButton = createButton(PolyLensConstant.REBOOT_DEVICE, PolyLensConstant.REBOOT, PolyLensConstant.REBOOTING,
 				PolyLensConstant.GRACE_PERIOD);
 		controllableProperties.add(restartButton);
-		stats.put(PolyLensConstant.REBOOT_DEVICE, PolyLensConstant.EMPTY);
 	}
 
 	/**
@@ -788,123 +827,127 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @param oldStats stats from model mapping
 	 * @return stats after modify data
 	 */
-	private Map<String, String> mapMonitoringProperty(Map<String, String> oldStats) throws JsonProcessingException {
+	private Map<String, String> mapMonitoringProperty(Map<String, String> oldStats) {
 		Map<String, String> newProperties = new HashMap<>();
 		String connections = oldStats.get(PolyLensConstant.CONNECTIONS);
 		String entitlements = oldStats.get(PolyLensConstant.ENTITLEMENTS);
 		List<Connection> connectionList;
 		List<Entitlement> entitlementList;
 		String group;
-		for (PolyLensAggregatedMetric property : PolyLensAggregatedMetric.values()) {
-			String name = property.getName();
-			switch (property) {
-				case MODEL:
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_NAME)));
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.DESCRIPTION, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_DESCRIPTION)));
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_FAMILY_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_FAMILY_NAME)));
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_MANUFACTURER_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_MANUFACTURER_NAME)));
-					break;
-				case SYSTEM_STATUS:
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.PROVISIONING_STATE,
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.GLOBALDIRETORY_STATE,
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBALDIRETORY_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.IPNETWORK_STATE,
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IPNETWORK_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.TRACKABLECAMERA_STATE,
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLECAMERA_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.CAMERA_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.AUDIO_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.REMOTECONTROL_STATE,
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTECONTROL_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.LOGTHRESHOLD_STATE,
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOGTHRESHOLD_STATE))));
-					break;
-				case LOCATION:
-					newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LATITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
-					newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LONGITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LONGITUDE)));
-					break;
-				case BANDWIDTH:
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.END_TIME, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME))));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.DOWNLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_DOWNLOAD_MBPS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_JITTER, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_JITTER_MS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.UPLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_UPLOAD_MBPS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.LATENCY, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LATENCY_MS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_LOSS_PERCENT, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LOSS_PERCENT)));
-					break;
-				case CONNECTIONS:
-					connectionList = objectMapper.readValue(connections, new TypeReference<List<Connection>>() {
-					});
-					if (connectionList.isEmpty()) {
-						newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, PolyLensConstant.NONE);
-						newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, PolyLensConstant.NONE);
-						newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, PolyLensConstant.NONE);
-					} else if (connectionList.size() == 1) {
-						newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(connectionList.get(0).getName()));
-						newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, getDefaultValueForNullData(connectionList.get(0).getMacAddress()));
-						newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, getDefaultValueForNullData(connectionList.get(0).getSoftwareVersion()));
-					} else {
-						for (int i = 0; i < connectionList.size(); i++) {
-							group = PolyLensConstant.CONNECTION + (connectionList.size() < 10 ? PolyLensConstant.ZERO : PolyLensConstant.EMPTY) + (i + 1);
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.NAME, getDefaultValueForNullData(connectionList.get(i).getName()));
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.MAC, getDefaultValueForNullData(connectionList.get(i).getMacAddress()));
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.SOFTWARE_VERSION,
-									getDefaultValueForNullData(connectionList.get(i).getSoftwareVersion()));
+		try {
+			for (PolyLensAggregatedMetric property : PolyLensAggregatedMetric.values()) {
+				String name = property.getName();
+				switch (property) {
+					case MODEL:
+						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_NAME)));
+						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.DESCRIPTION, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_DESCRIPTION)));
+						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_FAMILY_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_FAMILY_NAME)));
+						newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_MANUFACTURER_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_MANUFACTURER_NAME)));
+						break;
+					case SYSTEM_STATUS:
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.PROVISIONING_STATE,
+								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.GLOBAL_DIRECTORY_STATE,
+								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY_STATE))));
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.IP_NETWORK_STATE,
+								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IP_NETWORK_STATE))));
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.TRACKABLE_CAMERA_STATE,
+								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLE_CAMERA_STATE))));
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.CAMERA_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.AUDIO_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.REMOTE_CONTROL_STATE,
+								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL_STATE))));
+						newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.LOG_THRESHOLD_STATE,
+								uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD_STATE))));
+						break;
+					case LOCATION:
+						newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LATITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
+						newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LONGITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LONGITUDE)));
+						break;
+					case BANDWIDTH:
+						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.END_TIME, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME))));
+						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.DOWNLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_DOWNLOAD_MBPS)));
+						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_JITTER, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_JITTER_MS)));
+						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.UPLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_UPLOAD_MBPS)));
+						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.LATENCY, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LATENCY_MS)));
+						newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_LOSS_PERCENT, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LOSS_PERCENT)));
+						break;
+					case CONNECTIONS:
+						connectionList = objectMapper.readValue(connections, new TypeReference<List<Connection>>() {
+						});
+						if (connectionList.isEmpty()) {
+							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, PolyLensConstant.NONE);
+							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, PolyLensConstant.NONE);
+							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, PolyLensConstant.NONE);
+						} else if (connectionList.size() == 1) {
+							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(connectionList.get(0).getName()));
+							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, getDefaultValueForNullData(connectionList.get(0).getMacAddress()));
+							newProperties.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, getDefaultValueForNullData(connectionList.get(0).getSoftwareVersion()));
+						} else {
+							for (int i = 0; i < connectionList.size(); i++) {
+								group = PolyLensConstant.CONNECTION + (connectionList.size() < 10 ? PolyLensConstant.ZERO : PolyLensConstant.EMPTY) + (i + 1);
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.NAME, getDefaultValueForNullData(connectionList.get(i).getName()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.MAC, getDefaultValueForNullData(connectionList.get(i).getMacAddress()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.SOFTWARE_VERSION,
+										getDefaultValueForNullData(connectionList.get(i).getSoftwareVersion()));
+							}
 						}
-					}
-					break;
-				case ENTITLEMENTS:
-					entitlementList = objectMapper.readValue(entitlements, new TypeReference<List<Entitlement>>() {
-					});
-					if (entitlementList.isEmpty()) {
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, PolyLensConstant.NONE);
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, PolyLensConstant.NONE);
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, PolyLensConstant.NONE);
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, PolyLensConstant.NONE);
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, PolyLensConstant.NONE);
-					} else if (entitlementList.size() == 1) {
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, getDefaultValueForNullData(entitlementList.get(0).getLicenseKey()));
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getDate())));
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, getDefaultValueForNullData(entitlementList.get(0).getExpired()));
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getEndDate())));
-						newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, getDefaultValueForNullData(entitlementList.get(0).getProductSerial()));
-					} else {
-						for (int i = 0; i < entitlementList.size(); i++) {
-							group = PolyLensConstant.ENTITLEMENTS + (entitlementList.size() < 10 ? PolyLensConstant.ZERO : PolyLensConstant.EMPTY) + (i + 1);
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY,
-									getDefaultValueForNullData(entitlementList.get(i).getLicenseKey()));
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_DATE,
-									convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getDate())));
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_EXPIRED,
-									getDefaultValueForNullData(entitlementList.get(i).getExpired()));
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_END_DATE,
-									convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getEndDate())));
-							newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL,
-									getDefaultValueForNullData(entitlementList.get(i).getProductSerial()));
+						break;
+					case ENTITLEMENTS:
+						entitlementList = objectMapper.readValue(entitlements, new TypeReference<List<Entitlement>>() {
+						});
+						if (entitlementList.isEmpty()) {
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, PolyLensConstant.NONE);
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, PolyLensConstant.NONE);
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, PolyLensConstant.NONE);
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, PolyLensConstant.NONE);
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, PolyLensConstant.NONE);
+						} else if (entitlementList.size() == 1) {
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY, getDefaultValueForNullData(entitlementList.get(0).getLicenseKey()));
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getDate())));
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_EXPIRED, getDefaultValueForNullData(entitlementList.get(0).getExpired()));
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_END_DATE, convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(0).getEndDate())));
+							newProperties.put(PolyLensConstant.ENTITLEMENTS_GROUP + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL, getDefaultValueForNullData(entitlementList.get(0).getProductSerial()));
+						} else {
+							for (int i = 0; i < entitlementList.size(); i++) {
+								group = PolyLensConstant.ENTITLEMENTS + (entitlementList.size() < 10 ? PolyLensConstant.ZERO : PolyLensConstant.EMPTY) + (i + 1);
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_LICENSE_KEY,
+										getDefaultValueForNullData(entitlementList.get(i).getLicenseKey()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_DATE,
+										convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getDate())));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_EXPIRED,
+										getDefaultValueForNullData(entitlementList.get(i).getExpired()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_END_DATE,
+										convertFormatDateTime(getDefaultValueForNullData(entitlementList.get(i).getEndDate())));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.ENTITLEMENTS_PRODUCT_SERIAL,
+										getDefaultValueForNullData(entitlementList.get(i).getProductSerial()));
+							}
 						}
-					}
-					break;
-				case ROOM_NAME:
-					newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.NOT_SET : oldStats.get(name));
-					break;
-				case SITE_NAME:
-					newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.UNKNOWN : oldStats.get(name));
-					break;
-				case HAS_PERIPHERALS:
-				case PROVISIONING_ENABLED:
-				case SUPPORTS_SETTINGS:
-				case SUPPORTS_SOFTWARE_UPDATE:
-				case ALL_PERIPHERALS_LINKS:
-					newProperties.put(name, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(name))));
-					break;
-				case DATE_REGISTERED:
-				case LAST_DETECTED:
-				case LAST_CONFIG_REQUEST_DATE:
-					newProperties.put(name, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(name))));
-					break;
-				default:
-					newProperties.put(name, getDefaultValueForNullData(oldStats.get(name)));
+						break;
+					case ROOM_NAME:
+						newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.NOT_SET : oldStats.get(name));
+						break;
+					case SITE_NAME:
+						newProperties.put(name, StringUtils.isNullOrEmpty(oldStats.get(name)) ? PolyLensConstant.UNKNOWN : oldStats.get(name));
+						break;
+					case HAS_PERIPHERALS:
+					case PROVISIONING_ENABLED:
+					case SUPPORTS_SETTINGS:
+					case SUPPORTS_SOFTWARE_UPDATE:
+					case ALL_PERIPHERALS_LINKS:
+						newProperties.put(name, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(name))));
+						break;
+					case DATE_REGISTERED:
+					case LAST_DETECTED:
+					case LAST_CONFIG_REQUEST_DATE:
+						newProperties.put(name, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(name))));
+						break;
+					default:
+						newProperties.put(name, getDefaultValueForNullData(oldStats.get(name)));
+				}
 			}
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Error while map properties of aggregated device", e);
 		}
 		return newProperties;
 	}
@@ -925,7 +968,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 						String.format("Can't control property %s. The device has responded with an error: %s", propertyItem.name(), rebootDevice.get(PolyLensConstant.ERROR).asText()));
 			}
 		} catch (Exception e) {
-			throw new IllegalArgumentException(String.format("Can't control property %s. The device has responded with an error.", propertyItem.name()), e);
+			throw new IllegalArgumentException("Error while reboot the device", e);
 		}
 	}
 
@@ -965,7 +1008,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		ObjectNode filterNode = jsonNodeFactory.objectNode();
 		ArrayNode andArr = jsonNodeFactory.arrayNode();
 		for (PolyLensFilteringMetric item : PolyLensFilteringMetric.values()) {
-			andArr.add(createNode(getFilterValue(item.getName()), item.getField(), item.getLogic()));
+			andArr.add(createFilteringNode(getFilterValue(item.getName()), item.getField(), item.getLogic()));
 		}
 		filterNode.putArray(PolyLensConstant.AND).addAll(andArr);
 		ObjectNode paramsNode = jsonNodeFactory.objectNode();
@@ -1002,14 +1045,19 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * create nodes for variables node
+	 * Creates a JSON node representing a filtering node for GraphQL query.
+	 * The filtering node specifies the conditions for filtering data based on the provided input.
 	 *
-	 * @param input input value of filtering
-	 * @param name name of filtering
-	 * @param logic OR, NOT, AND
+	 * @param input The input string for filtering.
+	 * @param name The name of the field to be filtered.
+	 * @param logic The logic operator for the filtering node.
+	 * @return The JSON node representing the filtering node.
 	 */
-	private ObjectNode createNode(String input, String name, String logic) {
+	private ObjectNode createFilteringNode(String input, String name, String logic) {
 		ObjectNode root = jsonNodeFactory.objectNode();
+		if (StringUtils.isNullOrEmpty(input)) {
+			input = PolyLensConstant.EMPTY;
+		}
 		List<String> arrayValueFiltering = Arrays.asList(input.split(PolyLensConstant.COMMA));
 		if (arrayValueFiltering.isEmpty()) {
 			arrayValueFiltering.add(PolyLensConstant.EMPTY);

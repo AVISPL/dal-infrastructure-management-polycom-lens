@@ -108,7 +108,6 @@ public class SystemInformation {
 		this.queryCost = queryCost;
 	}
 
-
 	/**
 	 * Returns the value associated with the given PolyLensSystemInfoMetric.
 	 *
