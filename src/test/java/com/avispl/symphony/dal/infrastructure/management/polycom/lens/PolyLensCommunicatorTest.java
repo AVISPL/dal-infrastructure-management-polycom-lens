@@ -91,7 +91,7 @@ class PolyLensCommunicatorTest {
 		Thread.sleep(60000);
 		aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
 		System.out.println(aggregatedDeviceList.size());
-		Assert.assertEquals(42, aggregatedDeviceList.size());
+		Assert.assertEquals(45, aggregatedDeviceList.size());
 	}
 
 	/**
