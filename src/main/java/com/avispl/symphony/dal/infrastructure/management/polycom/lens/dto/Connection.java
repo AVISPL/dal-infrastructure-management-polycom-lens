@@ -17,7 +17,7 @@ public class Connection {
 	private String softwareVersion;
 
 	/**
-	 * Retrieves {@code {@link #name}}
+	 * Retrieves {@link #name}
 	 *
 	 * @return value of {@link #name}
 	 */
@@ -26,16 +26,16 @@ public class Connection {
 	}
 
 	/**
-	 * Sets {@code name}
+	 * Sets {@link #name} value
 	 *
-	 * @param name the {@code java.lang.String} field
+	 * @param name new value of {@link #name}
 	 */
 	public void setName(String name) {
 		this.name = name;
 	}
 
 	/**
-	 * Retrieves {@code {@link #macAddress}}
+	 * Retrieves {@link #macAddress}
 	 *
 	 * @return value of {@link #macAddress}
 	 */
@@ -44,16 +44,16 @@ public class Connection {
 	}
 
 	/**
-	 * Sets {@code macAddress}
+	 * Sets {@link #macAddress} value
 	 *
-	 * @param macAddress the {@code java.lang.String} field
+	 * @param macAddress new value of {@link #macAddress}
 	 */
 	public void setMacAddress(String macAddress) {
 		this.macAddress = macAddress;
 	}
 
 	/**
-	 * Retrieves {@code {@link #softwareVersion}}
+	 * Retrieves {@link #softwareVersion}
 	 *
 	 * @return value of {@link #softwareVersion}
 	 */
@@ -62,9 +62,9 @@ public class Connection {
 	}
 
 	/**
-	 * Sets {@code softwareVersion}
+	 * Sets {@link #softwareVersion} value
 	 *
-	 * @param softwareVersion the {@code java.lang.String} field
+	 * @param softwareVersion new value of {@link #softwareVersion}
 	 */
 	public void setSoftwareVersion(String softwareVersion) {
 		this.softwareVersion = softwareVersion;

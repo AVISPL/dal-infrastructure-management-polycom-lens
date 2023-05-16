@@ -16,7 +16,7 @@ public enum PolyLensAggregatedMetric {
 	SUPPORTS_SOFTWARE_UPDATE(PolyLensConstant.SUPPORTS_SOFTWARE_UPDATE),
 	CALL_STATUS(PolyLensConstant.CALL_STATUS),
 	TAGS(PolyLensConstant.TAGS),
-	ETAG(PolyLensConstant.ETAG),
+	E_TAG(PolyLensConstant.E_TAG),
 	TENANT_ID(PolyLensConstant.TENANT_ID),
 	PRODUCT_ID(PolyLensConstant.PRODUCT_ID),
 	ORGANIZATION(PolyLensConstant.ORGANIZATION),
@@ -67,7 +67,7 @@ public enum PolyLensAggregatedMetric {
 	}
 
 	/**
-	 * Retrieves {@code {@link #name}}
+	 * Retrieves {@link #name}
 	 *
 	 * @return value of {@link #name}
 	 */

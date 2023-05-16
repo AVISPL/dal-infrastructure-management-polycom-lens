@@ -24,11 +24,11 @@ public enum PolyLensProperties {
 	private boolean isControl;
 
 	/**
-	 * SennheiserPropertiesList instantiation
+	 * Constructs a PolyLensProperties object with the provided parameters.
 	 *
-	 * @param name property name
-	 * @param command property command
-	 * @param isControl controlling or monitoring
+	 * @param name The name of the PolyLens property.
+	 * @param command The command associated with the PolyLens property.
+	 * @param isControl A boolean value indicating whether the PolyLens property is a control property.
 	 */
 	PolyLensProperties(String name, String command, boolean isControl) {
 		this.name = name;

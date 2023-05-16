@@ -37,7 +37,7 @@ public class SystemInformation {
 	}
 
 	/**
-	 * Retrieves {@code {@link #countDevices}}
+	 * Retrieves {@link #countDevices}
 	 *
 	 * @return value of {@link #countDevices}
 	 */
@@ -46,16 +46,16 @@ public class SystemInformation {
 	}
 
 	/**
-	 * Sets {@code countDevices}
+	 * Sets {@link #countDevices} value
 	 *
-	 * @param countDevices the {@code java.lang.Integer} field
+	 * @param countDevices new value of {@link #countDevices}
 	 */
 	public void setCountDevices(Integer countDevices) {
 		this.countDevices = countDevices;
 	}
 
 	/**
-	 * Retrieves {@code {@link #tenantCount}}
+	 * Retrieves {@link #tenantCount}
 	 *
 	 * @return value of {@link #tenantCount}
 	 */
@@ -64,34 +64,16 @@ public class SystemInformation {
 	}
 
 	/**
-	 * Sets {@code tenantCount}
+	 * Sets {@link #tenantCount} value
 	 *
-	 * @param tenantCount the {@code java.lang.Integer} field
+	 * @param tenantCount new value of {@link #tenantCount}
 	 */
 	public void setTenantCount(Integer tenantCount) {
 		this.tenantCount = tenantCount;
 	}
 
 	/**
-	 * Retrieves {@code {@link #tenants}}
-	 *
-	 * @return value of {@link #tenants}
-	 */
-	public List<Tenant> getTenants() {
-		return tenants;
-	}
-
-	/**
-	 * Sets {@code tenants}
-	 *
-	 * @param tenants the {@code java.util.List<com.avispl.symphony.dal.poly.lens.aggregator.dto.TenantDTO>} field
-	 */
-	public void setTenants(List<Tenant> tenants) {
-		this.tenants = tenants;
-	}
-
-	/**
-	 * Retrieves {@code {@link #queryCost}}
+	 * Retrieves {@link #queryCost}
 	 *
 	 * @return value of {@link #queryCost}
 	 */
@@ -100,12 +82,30 @@ public class SystemInformation {
 	}
 
 	/**
-	 * Sets {@code queryCost}
+	 * Sets {@link #queryCost} value
 	 *
-	 * @param queryCost the {@code com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.system.QueryCost} field
+	 * @param queryCost new value of {@link #queryCost}
 	 */
 	public void setQueryCost(QueryCost queryCost) {
 		this.queryCost = queryCost;
+	}
+
+	/**
+	 * Retrieves {@link #tenants}
+	 *
+	 * @return value of {@link #tenants}
+	 */
+	public List<Tenant> getTenants() {
+		return tenants;
+	}
+
+	/**
+	 * Sets {@link #tenants} value
+	 *
+	 * @param tenants new value of {@link #tenants}
+	 */
+	public void setTenants(List<Tenant> tenants) {
+		this.tenants = tenants;
 	}
 
 	/**
