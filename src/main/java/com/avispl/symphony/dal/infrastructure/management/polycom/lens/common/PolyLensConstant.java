@@ -175,4 +175,5 @@ public class PolyLensConstant {
 	public static final String URL_GET_TOKEN = "https://login.silica-prod01.io.lens.poly.com/oauth/token";
 	public static final String DEFAULT_FORMAT_DATETIME = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
 	public static final String NEW_FORMAT_DATETIME = "EEE MMM dd HH:mm:ss z yyyy";
+	public static final int DEFAULT_POLLING_INTERVAL = 1;
 }
