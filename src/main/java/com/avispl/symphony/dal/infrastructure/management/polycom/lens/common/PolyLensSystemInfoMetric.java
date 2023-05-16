@@ -26,7 +26,7 @@ public enum PolyLensSystemInfoMetric {
 	TENANT_MEMBER_COUNT(PolyLensConstant.TENANT_MEMBER_COUNT, true),
 	;
 	private final String name;
-	private final Boolean isTenant;
+	private final boolean isTenant;
 
 	/**
 	 * Creates a new instance of the {@code PolyLensSystemInfoMetric} class with the specified name and tenant flag.
@@ -34,7 +34,7 @@ public enum PolyLensSystemInfoMetric {
 	 * @param name the name of the metric
 	 * @param isTenant a flag indicating whether the metric is for a tenant
 	 */
-	PolyLensSystemInfoMetric(String name, Boolean isTenant) {
+	PolyLensSystemInfoMetric(String name, boolean isTenant) {
 		this.name = name;
 		this.isTenant = isTenant;
 	}
@@ -53,7 +53,7 @@ public enum PolyLensSystemInfoMetric {
 	 *
 	 * @return value of {@link #isTenant}
 	 */
-	public Boolean getTenant() {
+	public boolean getTenant() {
 		return isTenant;
 	}
 }
