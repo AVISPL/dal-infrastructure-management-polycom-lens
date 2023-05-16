@@ -1208,13 +1208,14 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @throws IllegalArgumentException If the pollingInterval value is unexpected or cannot be parsed as an integer.
 	 */
 	private int getPollingIntervalValue(String pollingInterval) {
-		int value = 1;
+		int value;
 		try {
-			if (StringUtils.isNotNullOrEmpty(pollingInterval)) {
-				value = Integer.parseInt(pollingInterval);
+			value = Integer.parseInt(pollingInterval);
+			if (value < 1) {
+				value = PolyLensConstant.DEFAULT_POLLING_INTERVAL;
 			}
 		} catch (Exception e) {
-			throw new IllegalArgumentException(String.format("Unexpected pollingInterval value: %s", pollingInterval));
+			value = PolyLensConstant.DEFAULT_POLLING_INTERVAL;
 		}
 		return value;
 	}
