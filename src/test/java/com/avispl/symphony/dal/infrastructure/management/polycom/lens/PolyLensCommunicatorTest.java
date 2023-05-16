@@ -4,7 +4,6 @@
 
 package com.avispl.symphony.dal.infrastructure.management.polycom.lens;
 
-
 import java.util.List;
 import java.util.Map;
 

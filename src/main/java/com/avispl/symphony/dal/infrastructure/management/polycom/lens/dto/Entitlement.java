@@ -19,7 +19,7 @@ public class Entitlement {
 	private String productSerial;
 
 	/**
-	 * Retrieves {@code {@link #date}}
+	 * Retrieves {@link #date}
 	 *
 	 * @return value of {@link #date}
 	 */
@@ -28,16 +28,16 @@ public class Entitlement {
 	}
 
 	/**
-	 * Sets {@code date}
+	 * Sets {@link #date} value
 	 *
-	 * @param date the {@code java.lang.String} field
+	 * @param date new value of {@link #date}
 	 */
 	public void setDate(String date) {
 		this.date = date;
 	}
 
 	/**
-	 * Retrieves {@code {@link #endDate}}
+	 * Retrieves {@link #endDate}
 	 *
 	 * @return value of {@link #endDate}
 	 */
@@ -46,16 +46,16 @@ public class Entitlement {
 	}
 
 	/**
-	 * Sets {@code endDate}
+	 * Sets {@link #endDate} value
 	 *
-	 * @param endDate the {@code java.lang.String} field
+	 * @param endDate new value of {@link #endDate}
 	 */
 	public void setEndDate(String endDate) {
 		this.endDate = endDate;
 	}
 
 	/**
-	 * Retrieves {@code {@link #expired}}
+	 * Retrieves {@link #expired}
 	 *
 	 * @return value of {@link #expired}
 	 */
@@ -64,16 +64,16 @@ public class Entitlement {
 	}
 
 	/**
-	 * Sets {@code expired}
+	 * Sets {@link #expired} value
 	 *
-	 * @param expired the {@code java.lang.String} field
+	 * @param expired new value of {@link #expired}
 	 */
 	public void setExpired(String expired) {
 		this.expired = expired;
 	}
 
 	/**
-	 * Retrieves {@code {@link #licenseKey}}
+	 * Retrieves {@link #licenseKey}
 	 *
 	 * @return value of {@link #licenseKey}
 	 */
@@ -82,16 +82,16 @@ public class Entitlement {
 	}
 
 	/**
-	 * Sets {@code licenseKey}
+	 * Sets {@link #licenseKey} value
 	 *
-	 * @param licenseKey the {@code java.lang.String} field
+	 * @param licenseKey new value of {@link #licenseKey}
 	 */
 	public void setLicenseKey(String licenseKey) {
 		this.licenseKey = licenseKey;
 	}
 
 	/**
-	 * Retrieves {@code {@link #productSerial}}
+	 * Retrieves {@link #productSerial}
 	 *
 	 * @return value of {@link #productSerial}
 	 */
@@ -100,9 +100,9 @@ public class Entitlement {
 	}
 
 	/**
-	 * Sets {@code productSerial}
+	 * Sets {@link #productSerial} value
 	 *
-	 * @param productSerial the {@code java.lang.String} field
+	 * @param productSerial new value of {@link #productSerial}
 	 */
 	public void setProductSerial(String productSerial) {
 		this.productSerial = productSerial;

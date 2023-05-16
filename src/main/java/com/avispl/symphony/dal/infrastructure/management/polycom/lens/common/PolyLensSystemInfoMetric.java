@@ -40,7 +40,7 @@ public enum PolyLensSystemInfoMetric {
 	}
 
 	/**
-	 * Retrieves {@code {@link #name}}
+	 * Retrieves {@link #name}
 	 *
 	 * @return value of {@link #name}
 	 */
@@ -49,11 +49,11 @@ public enum PolyLensSystemInfoMetric {
 	}
 
 	/**
-	 * Retrieves {@code {@link #isTenant}}
+	 * Retrieves {@link #isTenant}
 	 *
 	 * @return value of {@link #isTenant}
 	 */
-	public boolean getTenant() {
+	public boolean isTenant() {
 		return isTenant;
 	}
 }

@@ -18,7 +18,7 @@ public class Tenant {
 	private Integer memberCount;
 
 	/**
-	 * Retrieves {@code {@link #id}}
+	 * Retrieves {@link #id}
 	 *
 	 * @return value of {@link #id}
 	 */
@@ -27,16 +27,16 @@ public class Tenant {
 	}
 
 	/**
-	 * Sets {@code id}
+	 * Sets {@link #id} value
 	 *
-	 * @param id the {@code java.lang.String} field
+	 * @param id new value of {@link #id}
 	 */
 	public void setId(String id) {
 		this.id = id;
 	}
 
 	/**
-	 * Retrieves {@code {@link #name}}
+	 * Retrieves {@link #name}
 	 *
 	 * @return value of {@link #name}
 	 */
@@ -45,16 +45,16 @@ public class Tenant {
 	}
 
 	/**
-	 * Sets {@code name}
+	 * Sets {@link #name} value
 	 *
-	 * @param name the {@code java.lang.String} field
+	 * @param name new value of {@link #name}
 	 */
 	public void setName(String name) {
 		this.name = name;
 	}
 
 	/**
-	 * Retrieves {@code {@link #type}}
+	 * Retrieves {@link #type}
 	 *
 	 * @return value of {@link #type}
 	 */
@@ -63,16 +63,16 @@ public class Tenant {
 	}
 
 	/**
-	 * Sets {@code type}
+	 * Sets {@link #type} value
 	 *
-	 * @param type the {@code java.lang.String} field
+	 * @param type new value of {@link #type}
 	 */
 	public void setType(String type) {
 		this.type = type;
 	}
 
 	/**
-	 * Retrieves {@code {@link #memberCount}}
+	 * Retrieves {@link #memberCount}
 	 *
 	 * @return value of {@link #memberCount}
 	 */
@@ -81,9 +81,9 @@ public class Tenant {
 	}
 
 	/**
-	 * Sets {@code memberCount}
+	 * Sets {@link #memberCount} value
 	 *
-	 * @param memberCount the {@code java.lang.Integer} field
+	 * @param memberCount new value of {@link #memberCount}
 	 */
 	public void setMemberCount(Integer memberCount) {
 		this.memberCount = memberCount;

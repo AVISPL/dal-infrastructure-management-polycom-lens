@@ -48,7 +48,7 @@ public class PolyLensConstant {
 	public static final String SUPPORTS_SOFTWARE_UPDATE = "SupportsSoftwareUpdate";
 	public static final String CALL_STATUS = "CallStatus";
 	public static final String TAGS = "Tags";
-	public static final String ETAG = "Etag";
+	public static final String E_TAG = "Etag";
 	public static final String PRODUCT_ID = "ProductID";
 	public static final String ORGANIZATION = "Organization";
 	public static final String HARDWARE_FAMILY = "HardwareFamily";

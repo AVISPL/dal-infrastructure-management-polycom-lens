@@ -19,7 +19,7 @@ public class QueryCost {
 	private Integer secondsToReset;
 
 	/**
-	 * Retrieves {@code {@link #queryCost}}
+	 * Retrieves {@link #queryCost}
 	 *
 	 * @return value of {@link #queryCost}
 	 */
@@ -28,16 +28,16 @@ public class QueryCost {
 	}
 
 	/**
-	 * Sets {@code queryCost}
+	 * Sets {@link #queryCost} value
 	 *
-	 * @param queryCost the {@code java.lang.Integer} field
+	 * @param queryCost new value of {@link #queryCost}
 	 */
 	public void setQueryCost(Integer queryCost) {
 		this.queryCost = queryCost;
 	}
 
 	/**
-	 * Retrieves {@code {@link #costUsed}}
+	 * Retrieves {@link #costUsed}
 	 *
 	 * @return value of {@link #costUsed}
 	 */
@@ -46,16 +46,16 @@ public class QueryCost {
 	}
 
 	/**
-	 * Sets {@code costUsed}
+	 * Sets {@link #costUsed} value
 	 *
-	 * @param costUsed the {@code java.lang.Integer} field
+	 * @param costUsed new value of {@link #costUsed}
 	 */
 	public void setCostUsed(Integer costUsed) {
 		this.costUsed = costUsed;
 	}
 
 	/**
-	 * Retrieves {@code {@link #costRemaining}}
+	 * Retrieves {@link #costRemaining}
 	 *
 	 * @return value of {@link #costRemaining}
 	 */
@@ -64,16 +64,16 @@ public class QueryCost {
 	}
 
 	/**
-	 * Sets {@code costRemaining}
+	 * Sets {@link #costRemaining} value
 	 *
-	 * @param costRemaining the {@code java.lang.Integer} field
+	 * @param costRemaining new value of {@link #costRemaining}
 	 */
 	public void setCostRemaining(Integer costRemaining) {
 		this.costRemaining = costRemaining;
 	}
 
 	/**
-	 * Retrieves {@code {@link #secondsToReset}}
+	 * Retrieves {@link #secondsToReset}
 	 *
 	 * @return value of {@link #secondsToReset}
 	 */
@@ -82,9 +82,9 @@ public class QueryCost {
 	}
 
 	/**
-	 * Sets {@code secondsToReset}
+	 * Sets {@link #secondsToReset} value
 	 *
-	 * @param secondsToReset the {@code java.lang.Integer} field
+	 * @param secondsToReset new value of {@link #secondsToReset}
 	 */
 	public void setSecondsToReset(Integer secondsToReset) {
 		this.secondsToReset = secondsToReset;

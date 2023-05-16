@@ -36,7 +36,7 @@ public enum PolyLensFilteringMetric {
 	}
 
 	/**
-	 * Retrieves {@code {@link #name}}
+	 * Retrieves {@link #name}
 	 *
 	 * @return value of {@link #name}
 	 */
@@ -45,7 +45,7 @@ public enum PolyLensFilteringMetric {
 	}
 
 	/**
-	 * Retrieves {@code {@link #field}}
+	 * Retrieves {@link #field}
 	 *
 	 * @return value of {@link #field}
 	 */
@@ -54,7 +54,7 @@ public enum PolyLensFilteringMetric {
 	}
 
 	/**
-	 * Retrieves {@code {@link #logic}}
+	 * Retrieves {@link #logic}
 	 *
 	 * @return value of {@link #logic}
 	 */

@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2023 AVI-SPL, Inc. All Rights Reserved.
  */
+
 package com.avispl.symphony.dal.infrastructure.management.polycom.lens;
 
 import java.io.IOException;
@@ -123,12 +124,16 @@ import com.avispl.symphony.dal.util.StringUtils;
  * <ul>
  * <li> - rebootDevice</li>
  * </ul>
+ *
+ * @author Harry / Symphony Dev Team<br>
+ * Created on 4/11/2023
+ * @since 1.0.0
  */
 public class PolyLensCommunicator extends RestCommunicator implements Aggregator, Monitorable, Controller {
 	/**
 	 * Process that is running constantly and triggers collecting data from PoLy Lens API endpoints, based on the given timeouts and thresholds.
 	 *
-	 * @author Harrry
+	 * @author Harry
 	 * @since 1.0.0
 	 */
 	class PolyLensDataLoader implements Runnable {
@@ -374,25 +379,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	private SystemInformation systemInformation = new SystemInformation();
 
 	/**
-	 * Retrieves {@code {@link #filterRoomNameNotIn }}
-	 *
-	 * @return value of {@link #filterRoomNameNotIn}
-	 */
-	public String getFilterRoomNameNotIn() {
-		return filterRoomNameNotIn;
-	}
-
-	/**
-	 * Sets {@code filterNotRoom}
-	 *
-	 * @param filterRoomNameNotIn the {@code java.lang.String} field
-	 */
-	public void setFilterRoomNameNotIn(String filterRoomNameNotIn) {
-		this.filterRoomNameNotIn = filterRoomNameNotIn;
-	}
-
-	/**
-	 * Retrieves {@code {@link #filterRoomName }}
+	 * Retrieves {@link #filterRoomName}
 	 *
 	 * @return value of {@link #filterRoomName}
 	 */
@@ -401,16 +388,16 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * Sets {@code filterRoom}
+	 * Sets {@link #filterRoomName} value
 	 *
-	 * @param filterRoomName the {@code java.lang.String} field
+	 * @param filterRoomName new value of {@link #filterRoomName}
 	 */
 	public void setFilterRoomName(String filterRoomName) {
 		this.filterRoomName = filterRoomName;
 	}
 
 	/**
-	 * Retrieves {@code {@link #filterSiteName }}
+	 * Retrieves {@link #filterSiteName}
 	 *
 	 * @return value of {@link #filterSiteName}
 	 */
@@ -419,16 +406,16 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * Sets {@code filterSite}
+	 * Sets {@link #filterSiteName} value
 	 *
-	 * @param filterSiteName the {@code java.lang.String} field
+	 * @param filterSiteName new value of {@link #filterSiteName}
 	 */
 	public void setFilterSiteName(String filterSiteName) {
 		this.filterSiteName = filterSiteName;
 	}
 
 	/**
-	 * Retrieves {@code {@link #filterModelName }}
+	 * Retrieves {@link #filterModelName}
 	 *
 	 * @return value of {@link #filterModelName}
 	 */
@@ -437,16 +424,34 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * Sets {@code filterModel}
+	 * Sets {@link #filterModelName} value
 	 *
-	 * @param filterModelName the {@code java.lang.String} field
+	 * @param filterModelName new value of {@link #filterModelName}
 	 */
 	public void setFilterModelName(String filterModelName) {
 		this.filterModelName = filterModelName;
 	}
 
 	/**
-	 * Retrieves {@code {@link #pageSize}}
+	 * Retrieves {@link #filterRoomNameNotIn}
+	 *
+	 * @return value of {@link #filterRoomNameNotIn}
+	 */
+	public String getFilterRoomNameNotIn() {
+		return filterRoomNameNotIn;
+	}
+
+	/**
+	 * Sets {@link #filterRoomNameNotIn} value
+	 *
+	 * @param filterRoomNameNotIn new value of {@link #filterRoomNameNotIn}
+	 */
+	public void setFilterRoomNameNotIn(String filterRoomNameNotIn) {
+		this.filterRoomNameNotIn = filterRoomNameNotIn;
+	}
+
+	/**
+	 * Retrieves {@link #pageSize}
 	 *
 	 * @return value of {@link #pageSize}
 	 */
@@ -455,9 +460,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * Sets {@code pageSize}
+	 * Sets {@link #pageSize} value
 	 *
-	 * @param pageSize the {@code int} field
+	 * @param pageSize new value of {@link #pageSize}
 	 */
 	public void setPageSize(int pageSize) {
 		this.pageSize = pageSize;
