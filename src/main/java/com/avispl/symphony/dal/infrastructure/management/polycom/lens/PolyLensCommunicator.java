@@ -774,7 +774,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		try {
 			JsonNode systemResponse = this.doPost(PolyLensConstant.URI_POLY_LENS, PolyLensProperties.SYSTEM_INFO.getCommand(), JsonNode.class);
 			if (systemResponse == null) {
-				throw new ResourceNotReachableException("Error while populate aggregator device, the response is empty.");
+				throw new ResourceNotReachableException("Error while retrieving system information, the response is empty.");
 			}
 			systemInformation = objectMapper.treeToValue(systemResponse.get(PolyLensConstant.DATA), SystemInformation.class);
 		} catch (Exception e) {
