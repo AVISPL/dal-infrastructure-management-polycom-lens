@@ -774,7 +774,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		try {
 			JsonNode systemResponse = this.doPost(PolyLensConstant.URI_POLY_LENS, PolyLensProperties.SYSTEM_INFO.getCommand(), JsonNode.class);
 			if (systemResponse == null) {
-				throw new ResourceNotReachableException("Error when get system information");
+				throw new ResourceNotReachableException("Error while populate aggregator device, the response is empty.");
 			}
 			systemInformation = objectMapper.treeToValue(systemResponse.get(PolyLensConstant.DATA), SystemInformation.class);
 		} catch (Exception e) {
@@ -795,7 +795,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 			JsonNode aggregatedDevice = this.doPost(PolyLensConstant.URI_POLY_LENS, query, JsonNode.class);
 			if (aggregatedDevice == null) {
-				throw new ResourceNotReachableException("Error while populate aggregated device");
+				throw new ResourceNotReachableException("Error while populate aggregated device, the response is empty.");
 			}
 			JsonNode jsonArray = aggregatedDevice.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.EDGES);
 			nextToken = aggregatedDevice.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.PAGE_INFO).get(PolyLensConstant.NEXT_TOKEN).asText();
@@ -821,24 +821,16 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		List<AggregatedDevice> resultAggregatedDeviceList = new ArrayList<>();
 		synchronized (aggregatedDeviceList) {
 			for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
-				AggregatedDevice newClonedAggregatedDevice = new AggregatedDevice();
-				newClonedAggregatedDevice.setDeviceId(aggregatedDevice.getDeviceId());
-				newClonedAggregatedDevice.setDeviceModel(aggregatedDevice.getDeviceModel());
-				newClonedAggregatedDevice.setDeviceName(aggregatedDevice.getDeviceName());
-				newClonedAggregatedDevice.setSerialNumber(aggregatedDevice.getSerialNumber());
-				newClonedAggregatedDevice.setDeviceOnline(aggregatedDevice.getDeviceOnline());
-
-				Map<String, String> oldStats = aggregatedDevice.getProperties();
+				Map<String, String> stats = aggregatedDevice.getProperties();
 				List<AdvancedControllableProperty> controllableProperties = aggregatedDevice.getControllableProperties();
-				Map<String, String> newProperties;
-				newProperties = mapMonitoringProperty(oldStats);
-				if (newClonedAggregatedDevice.getDeviceOnline()) {
-					createControl(controllableProperties, newProperties);
+				stats = mapMonitoringProperty(stats);
+				if (aggregatedDevice.getDeviceOnline()) {
+					createControl(controllableProperties, stats);
 				}
 
-				newClonedAggregatedDevice.setProperties(newProperties);
-				newClonedAggregatedDevice.setControllableProperties(controllableProperties);
-				resultAggregatedDeviceList.add(newClonedAggregatedDevice);
+				aggregatedDevice.setProperties(stats);
+				aggregatedDevice.setControllableProperties(controllableProperties);
+				resultAggregatedDeviceList.add(aggregatedDevice);
 			}
 		}
 		return resultAggregatedDeviceList;
