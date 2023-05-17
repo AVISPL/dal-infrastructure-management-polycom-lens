@@ -10,9 +10,6 @@ models:
         deviceOnline: get("connected")
         serialNumber: get("serialNumber")
         macAddresses: get("macAddress")
-        type : Codecs
-        category : Single Codecs
-        deviceMake : Poly
       properties:
         SupportsSettings: get("supportsSettings")
         SupportsSoftwareUpdate: get("supportsSoftwareUpdate")

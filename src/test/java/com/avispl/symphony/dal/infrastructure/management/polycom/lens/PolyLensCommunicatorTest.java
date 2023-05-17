@@ -138,7 +138,7 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.setFilterModelName("");
 		polyLensCommunicator.setFilterRoomName("Lab,Unassigned");
 		polyLensCommunicator.setFilterSiteName("");
-		polyLensCommunicator.setFilterRoomNameNotIn("");
+		polyLensCommunicator.setFilterExcludeRoomName("");
 		polyLensCommunicator.getMultipleStatistics();
 		polyLensCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
@@ -154,7 +154,7 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.setFilterModelName("Lens Desktop,Lens Mobile");
 		polyLensCommunicator.setFilterRoomName("");
 		polyLensCommunicator.setFilterSiteName("USA - OH - Broadview Heights,USA - OH - Brecksville");
-		polyLensCommunicator.setFilterRoomNameNotIn("");
+		polyLensCommunicator.setFilterExcludeRoomName("");
 		polyLensCommunicator.getMultipleStatistics();
 		polyLensCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);
@@ -170,7 +170,7 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.setFilterModelName("Lens Desktop,Studio USB");
 		polyLensCommunicator.setFilterRoomName("");
 		polyLensCommunicator.setFilterSiteName("");
-		polyLensCommunicator.setFilterRoomNameNotIn("Not Set");
+		polyLensCommunicator.setFilterExcludeRoomName("Not Set");
 		polyLensCommunicator.getMultipleStatistics();
 		polyLensCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(30000);

@@ -15,8 +15,8 @@ package com.avispl.symphony.dal.infrastructure.management.polycom.lens.common;
 public enum PolyLensFilteringMetric {
 	SITE(PolyLensConstant.FILTER_SITE, PolyLensConstant.SITE, PolyLensConstant.OR),
 	MODEL(PolyLensConstant.FILTER_MODEL, PolyLensConstant.HARDWARE_MODEL, PolyLensConstant.OR),
-	ROOM_OR(PolyLensConstant.FILTER_ROOM, PolyLensConstant.ROOM, PolyLensConstant.OR),
-	ROOM_NOT(PolyLensConstant.FILTER_NOT_ROOM, PolyLensConstant.ROOM, PolyLensConstant.NOT),
+	ROOM(PolyLensConstant.FILTER_ROOM, PolyLensConstant.ROOM, PolyLensConstant.OR),
+	ROOM_EXCLUDE(PolyLensConstant.FILTER_EXCLUDE_ROOM, PolyLensConstant.ROOM, PolyLensConstant.NOT),
 	;
 	private final String name;
 	private final String field;
