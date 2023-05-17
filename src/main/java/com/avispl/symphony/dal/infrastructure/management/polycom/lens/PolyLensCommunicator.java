@@ -234,7 +234,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	/**
 	 * filter logic NOT by room field
 	 */
-	private String filterRoomNameNotIn;
+	private String filterExcludeRoomName;
 
 	/**
 	 * Retrieves the polling interval.
@@ -429,21 +429,21 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * Retrieves {@link #filterRoomNameNotIn}
+	 * Retrieves {@link #filterExcludeRoomName}
 	 *
-	 * @return value of {@link #filterRoomNameNotIn}
+	 * @return value of {@link #filterExcludeRoomName}
 	 */
-	public String getFilterRoomNameNotIn() {
-		return filterRoomNameNotIn;
+	public String getFilterExcludeRoomName() {
+		return filterExcludeRoomName;
 	}
 
 	/**
-	 * Sets {@link #filterRoomNameNotIn} value
+	 * Sets {@link #filterExcludeRoomName} value
 	 *
-	 * @param filterRoomNameNotIn new value of {@link #filterRoomNameNotIn}
+	 * @param filterExcludeRoomName new value of {@link #filterExcludeRoomName}
 	 */
-	public void setFilterRoomNameNotIn(String filterRoomNameNotIn) {
-		this.filterRoomNameNotIn = filterRoomNameNotIn;
+	public void setFilterExcludeRoomName(String filterExcludeRoomName) {
+		this.filterExcludeRoomName = filterExcludeRoomName;
 	}
 
 	/**
@@ -539,7 +539,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			if (aggregatedDeviceList.isEmpty()) {
 				return aggregatedDeviceList;
 			}
-			return cloneAggregatedDeviceList();
+			return cloneAndPopulateAggregatedDeviceList();
 		}
 		return aggregatedDeviceList;
 	}
@@ -751,7 +751,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 */
 	private String getToken() {
 		String token;
-		String body = "{\"client_id\":\"" + this.getLogin() + "\",\"client_secret\":\"" + this.getPassword() + "\",\"grant_type\":\"" + PolyLensConstant.GRANT_TYPE + "\"}";
+		String body = String.format("{\"client_id\":\"%s\",\"client_secret\":\"%s\",\"grant_type\":\"%s\"}",
+				this.getLogin(), this.getPassword(), PolyLensConstant.GRANT_TYPE);
 		try {
 			JsonNode response = doPost(PolyLensConstant.URL_GET_TOKEN, body, JsonNode.class);
 			if (response.size() == 1) {
@@ -759,7 +760,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 			tokenExpire = System.currentTimeMillis();
 			token = response.get(PolyLensConstant.ACCESS_TOKEN).asText();
-			expiresIn = (response.get(PolyLensConstant.EXPIRES_IN).asLong() - 1800) * 1000;
+			expiresIn = (response.get(PolyLensConstant.EXPIRES_IN).asLong() - PolyLensConstant.HALF_AN_HOUR) * 1000;
 		} catch (Exception e) {
 			throw new ResourceNotReachableException("Can't get token from client id and client secret", e);
 		}
@@ -793,6 +794,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				query = query.replace(PolyLensConstant.NULL, PolyLensConstant.QUOTES + nextToken + PolyLensConstant.QUOTES);
 			}
 			JsonNode aggregatedDevice = this.doPost(PolyLensConstant.URI_POLY_LENS, query, JsonNode.class);
+			if (aggregatedDevice == null) {
+				throw new ResourceNotReachableException("Error while populate aggregated device");
+			}
 			JsonNode jsonArray = aggregatedDevice.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.EDGES);
 			nextToken = aggregatedDevice.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.PAGE_INFO).get(PolyLensConstant.NEXT_TOKEN).asText();
 			for (JsonNode jsonNode : jsonArray) {
@@ -813,7 +817,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 *
 	 * @return List<AggregatedDevice> aggregated device list
 	 */
-	private List<AggregatedDevice> cloneAggregatedDeviceList() {
+	private List<AggregatedDevice> cloneAndPopulateAggregatedDeviceList() {
 		List<AggregatedDevice> resultAggregatedDeviceList = new ArrayList<>();
 		synchronized (aggregatedDeviceList) {
 			for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
@@ -823,9 +827,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				newClonedAggregatedDevice.setDeviceName(aggregatedDevice.getDeviceName());
 				newClonedAggregatedDevice.setSerialNumber(aggregatedDevice.getSerialNumber());
 				newClonedAggregatedDevice.setDeviceOnline(aggregatedDevice.getDeviceOnline());
-				newClonedAggregatedDevice.setType(aggregatedDevice.getType());
-				newClonedAggregatedDevice.setCategory(aggregatedDevice.getCategory());
-				newClonedAggregatedDevice.setDeviceMake(aggregatedDevice.getDeviceMake());
 
 				Map<String, String> oldStats = aggregatedDevice.getProperties();
 				List<AdvancedControllableProperty> controllableProperties = aggregatedDevice.getControllableProperties();
@@ -873,38 +874,44 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			String name = property.getName();
 			switch (property) {
 				case MODEL:
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_NAME)));
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.DESCRIPTION, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_DESCRIPTION)));
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_FAMILY_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_FAMILY_NAME)));
-					newProperties.put(PolyLensConstant.MODEL_GROUP + PolyLensConstant.HARDWARE_MANUFACTURER_NAME, getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_MANUFACTURER_NAME)));
+					newProperties.put(PolyLensConstant.MODEL_GROUP.concat(PolyLensConstant.NAME), getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_NAME)));
+					newProperties.put(PolyLensConstant.MODEL_GROUP.concat(PolyLensConstant.DESCRIPTION), getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_DESCRIPTION)));
+					newProperties.put(PolyLensConstant.MODEL_GROUP.concat(PolyLensConstant.HARDWARE_FAMILY_NAME), getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_FAMILY_NAME)));
+					newProperties.put(PolyLensConstant.MODEL_GROUP.concat(PolyLensConstant.HARDWARE_MANUFACTURER_NAME),
+							getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_MANUFACTURER_NAME)));
 					break;
 				case SYSTEM_STATUS:
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.PROVISIONING_STATE,
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.PROVISIONING_STATE),
 							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.GLOBAL_DIRECTORY_STATE,
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.GLOBAL_DIRECTORY_STATE),
 							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.IP_NETWORK_STATE,
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.IP_NETWORK_STATE),
 							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IP_NETWORK_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.TRACKABLE_CAMERA_STATE,
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.TRACKABLE_CAMERA_STATE),
 							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLE_CAMERA_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.CAMERA_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.AUDIO_STATE, uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.REMOTE_CONTROL_STATE,
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.CAMERA_STATE),
+							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.AUDIO_STATE), uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.REMOTE_CONTROL_STATE),
 							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP + PolyLensConstant.LOG_THRESHOLD_STATE,
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.LOG_THRESHOLD_STATE),
 							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD_STATE))));
 					break;
 				case LOCATION:
-					newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LATITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
-					newProperties.put(PolyLensConstant.LOCATION_GROUP + PolyLensConstant.LONGITUDE, getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LONGITUDE)));
+					newProperties.put(PolyLensConstant.LOCATION_GROUP.concat(PolyLensConstant.LATITUDE), getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
+					newProperties.put(PolyLensConstant.LOCATION_GROUP.concat(PolyLensConstant.LONGITUDE), getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LONGITUDE)));
 					break;
 				case BANDWIDTH:
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.END_TIME, convertFormatDateTime(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME))));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.DOWNLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_DOWNLOAD_MBPS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_JITTER, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_JITTER_MS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.UPLOAD, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_UPLOAD_MBPS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.LATENCY, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LATENCY_MS)));
-					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP + PolyLensConstant.PING_LOSS_PERCENT, getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LOSS_PERCENT)));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP.concat(PolyLensConstant.END_TIME), convertFormatDateTime(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_END_TIME))));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP.concat(PolyLensConstant.DOWNLOAD),
+							getTwoDecimalPlaces(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_DOWNLOAD_MBPS))));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP.concat(PolyLensConstant.PING_JITTER),
+							getTwoDecimalPlaces(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_JITTER_MS))));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP.concat(PolyLensConstant.UPLOAD), getTwoDecimalPlaces(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_UPLOAD_MBPS))));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP.concat(PolyLensConstant.LATENCY),
+							getTwoDecimalPlaces(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LATENCY_MS))));
+					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP.concat(PolyLensConstant.PING_LOSS_PERCENT),
+							getTwoDecimalPlaces(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LOSS_PERCENT))));
 					break;
 				case CONNECTIONS:
 					try {
@@ -1099,8 +1106,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				return filterRoomName;
 			case PolyLensConstant.FILTER_SITE:
 				return filterSiteName;
-			case PolyLensConstant.FILTER_NOT_ROOM:
-				return filterRoomNameNotIn;
+			case PolyLensConstant.FILTER_EXCLUDE_ROOM:
+				return filterExcludeRoomName;
 			default:
 				return PolyLensConstant.EMPTY;
 		}
@@ -1218,5 +1225,26 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			value = PolyLensConstant.DEFAULT_POLLING_INTERVAL;
 		}
 		return value;
+	}
+
+	/**
+	 * Retrieves the two decimal places from the given input value.
+	 *
+	 * This method extracts the two decimal places from the input value and returns it as a string.
+	 * If the input value does not contain a decimal point or the decimal part has less than two digits,
+	 * the original input value is returned without any modifications.
+	 *
+	 * @param input The input value as a string.
+	 * @return The two decimal places extracted from the input value, or the original input value if it does not meet the criteria.
+	 */
+	private String getTwoDecimalPlaces(String input) {
+		String output = input;
+		if (input.contains(PolyLensConstant.DOT)) {
+			int decimalIndex = input.indexOf(PolyLensConstant.DOT);
+			if (decimalIndex + 3 < input.length()) {
+				output = input.substring(0, decimalIndex + 3);
+			}
+		}
+		return output;
 	}
 }
