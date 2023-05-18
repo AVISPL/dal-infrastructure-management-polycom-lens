@@ -874,20 +874,20 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					break;
 				case SYSTEM_STATUS:
 					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.PROVISIONING_STATE),
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
 					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.GLOBAL_DIRECTORY_STATE),
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY_STATE))));
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY_STATE))));
 					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.IP_NETWORK_STATE),
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IP_NETWORK_STATE))));
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IP_NETWORK_STATE))));
 					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.TRACKABLE_CAMERA_STATE),
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLE_CAMERA_STATE))));
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLE_CAMERA_STATE))));
 					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.CAMERA_STATE),
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.AUDIO_STATE), uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.AUDIO_STATE), removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
 					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.REMOTE_CONTROL_STATE),
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL_STATE))));
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL_STATE))));
 					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.LOG_THRESHOLD_STATE),
-							uppercaseFirstCharacter(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD_STATE))));
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD_STATE))));
 					break;
 				case LOCATION:
 					newProperties.put(PolyLensConstant.LOCATION_GROUP.concat(PolyLensConstant.LATITUDE), getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
@@ -1170,6 +1170,18 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	private String uppercaseFirstCharacter(String input) {
 		char firstChar = input.charAt(0);
 		return Character.toUpperCase(firstChar) + input.substring(1);
+	}
+
+	/**
+	 * Removes underscore (_) characters from the given input string.
+	 * This method removes all occurrences of underscore (_) characters from the input string.
+	 * It then returns the modified string with the first character in uppercase.
+	 *
+	 * @param input The input string to be processed.
+	 * @return The modified string with underscore characters removed and the first character in uppercase.
+	 */
+	private String removeUnderscore(String input) {
+		return uppercaseFirstCharacter(input.replace(PolyLensConstant.UNDERSCORE, PolyLensConstant.SPACE));
 	}
 
 	/**
