@@ -82,13 +82,13 @@ public class PolyLensConstant {
 	public static final String MODEL_HARDWARE_FAMILY_NAME = "ModelHardwareFamilyName";
 	public static final String MODEL_HARDWARE_MANUFACTURER_NAME = "ModelHardwareManufacturerName";
 	public static final String PROVISIONING_STATE = "ProvisioningState";
-	public static final String GLOBAL_DIRECTORY_STATE = "GlobaldirectoryState";
+	public static final String GLOBAL_DIRECTORY_STATE = "GlobalDirectoryState";
 	public static final String IP_NETWORK_STATE = "IPNetworkState";
-	public static final String TRACKABLE_CAMERA_STATE = "TrackablecameraState";
+	public static final String TRACKABLE_CAMERA_STATE = "TrackableCameraState";
 	public static final String CAMERA_STATE = "CameraState";
 	public static final String AUDIO_STATE = "AudioState";
-	public static final String REMOTE_CONTROL_STATE = "RemotecontrolState";
-	public static final String LOG_THRESHOLD_STATE = "LogthresholdState";
+	public static final String REMOTE_CONTROL_STATE = "RemoteControlState";
+	public static final String LOG_THRESHOLD_STATE = "LogThresholdState";
 	public static final String LOCATION_LATITUDE = "LocationLatitude";
 	public static final String LOCATION_LONGITUDE = "LocationLongitude";
 	public static final String ENTITLEMENTS_PRODUCT_SERIAL = "ProductSerial";
@@ -174,6 +174,8 @@ public class PolyLensConstant {
 	public static final int HALF_AN_HOUR = 1800;
 	public static final String COMMA = ",";
 	public static final String DOT = ".";
+	public static final String SPACE = " ";
+	public static final String UNDERSCORE = "_";
 	public static final String URL_GET_TOKEN = "https://login.silica-prod01.io.lens.poly.com/oauth/token";
 	public static final String DEFAULT_FORMAT_DATETIME = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
 	public static final String NEW_FORMAT_DATETIME = "EEE MMM dd HH:mm:ss z yyyy";
