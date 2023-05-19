@@ -175,6 +175,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					} catch (InterruptedException e) {
 						throw new RuntimeException(e);
 					}
+					if (PolyLensConstant.NULL.equals(nextToken)) {
+						threadIndex = threadCount;
+					}
 				}
 
 				if (!inProgress) {
@@ -197,7 +200,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					threadIndex = 0;
 					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
 					if (PolyLensConstant.NULL.equals(nextToken)) {
-						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + pollingIntervalValue * 60 * 1000;
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + remainingPollingIntervalValue * 60 * 1000;
 					}
 				}
 
@@ -246,6 +249,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * Retrieves the polling interval value.
 	 */
 	private int pollingIntervalValue;
+
+	/**
+	 * Retrieves the remaining polling interval value.
+	 */
+	private int remainingPollingIntervalValue;
 
 	/**
 	 * number of devices obtained in 1 request
@@ -524,6 +532,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics() {
 		if (systemInformation.getCountDevices() != null) {
+			calculateRemainingPollingIntervalValue(systemInformation.getCountDevices());
 			threadCount = PolyLensConstant.ONE_THREAD;
 			if (systemInformation.getCountDevices() > pageSize) {
 				threadCount = PolyLensConstant.TWO_THREADS;
@@ -593,7 +602,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				controlProperty(p);
 			} catch (Exception e) {
 				logger.error(String.format("Error when control property %s", p.getProperty()), e);
-				e.printStackTrace();
 			}
 		}
 	}
@@ -1139,7 +1147,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		if (StringUtils.isNullOrEmpty(input)) {
 			input = PolyLensConstant.EMPTY;
 		}
-		List<String> arrayValueFiltering = Arrays.asList(input.split(PolyLensConstant.COMMA));
+		List<String> arrayValueFiltering = Arrays.stream(input.split(PolyLensConstant.COMMA)).map(String::trim).collect(Collectors.toList());
 		if (arrayValueFiltering.isEmpty()) {
 			arrayValueFiltering.add(PolyLensConstant.EMPTY);
 		}
@@ -1229,6 +1237,24 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			value = PolyLensConstant.DEFAULT_POLLING_INTERVAL;
 		}
 		return value;
+	}
+
+	/**
+	 * Calculates the remaining polling interval value based on the number of devices.
+	 *
+	 * @param numberDevice The total number of devices.
+	 */
+	private void calculateRemainingPollingIntervalValue(int numberDevice) {
+		int maxNumberDeviceInPollingInterval = pageSize * 2;
+		int neededPollingInterval = numberDevice / maxNumberDeviceInPollingInterval;
+		if (numberDevice % maxNumberDeviceInPollingInterval != 0) {
+			neededPollingInterval++;
+		}
+
+		remainingPollingIntervalValue = PolyLensConstant.DEFAULT_POLLING_INTERVAL;
+		if (pollingIntervalValue > neededPollingInterval) {
+			remainingPollingIntervalValue = pollingIntervalValue - neededPollingInterval;
+		}
 	}
 
 	/**
