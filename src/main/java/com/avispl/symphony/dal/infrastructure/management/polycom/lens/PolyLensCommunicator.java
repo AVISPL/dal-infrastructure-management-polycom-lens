@@ -190,7 +190,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				}
 				if (threadIndex == threadCount) {
 					threadIndex = 0;
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
+					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 30000;
 				}
 
 				if (logger.isDebugEnabled()) {
