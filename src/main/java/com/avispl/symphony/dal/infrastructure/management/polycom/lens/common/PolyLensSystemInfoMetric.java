@@ -15,28 +15,29 @@ package com.avispl.symphony.dal.infrastructure.management.polycom.lens.common;
  */
 public enum PolyLensSystemInfoMetric {
 	COUNT_DEVICES(PolyLensConstant.COUNT_DEVICES, false),
+	UPDATE_INTERVAL(PolyLensConstant.UPDATE_INTERVAL, false),
 	TENANT_COUNT(PolyLensConstant.TENANT_COUNT, false),
-	QUERY_COST(PolyLensConstant.QUERY_COST, false),
-	COST_USED(PolyLensConstant.COST_USED, false),
-	COST_REMAINING(PolyLensConstant.COST_REMAINING, false),
-	SECOND_TO_RESET(PolyLensConstant.SECOND_TO_RESET, false),
-	TENANT_ID(PolyLensConstant.TENANT_ID, true),
-	TENANT_NAME(PolyLensConstant.TENANT_NAME, true),
-	TENANT_TYPE(PolyLensConstant.TENANT_TYPE, true),
-	TENANT_MEMBER_COUNT(PolyLensConstant.TENANT_MEMBER_COUNT, true),
+	QUERY_COST(PolyLensConstant.QUERY_COST, true),
+	COST_USED(PolyLensConstant.COST_USED, true),
+	COST_REMAINING(PolyLensConstant.COST_REMAINING, true),
+	SECOND_TO_RESET(PolyLensConstant.SECOND_TO_RESET, true),
+	TENANT_ID(PolyLensConstant.TENANT_ID, false),
+	TENANT_NAME(PolyLensConstant.TENANT_NAME, false),
+	TENANT_TYPE(PolyLensConstant.TENANT_TYPE, false),
+	TENANT_MEMBER_COUNT(PolyLensConstant.TENANT_MEMBER_COUNT, false),
 	;
 	private final String name;
-	private final boolean isTenant;
+	private final boolean isQueryCost;
 
 	/**
 	 * Creates a new instance of the {@code PolyLensSystemInfoMetric} class with the specified name and tenant flag.
 	 *
 	 * @param name the name of the metric
-	 * @param isTenant a flag indicating whether the metric is for a tenant
+	 * @param isQueryCost a flag indicating whether the metric is for a tenant
 	 */
-	PolyLensSystemInfoMetric(String name, boolean isTenant) {
+	PolyLensSystemInfoMetric(String name, boolean isQueryCost) {
 		this.name = name;
-		this.isTenant = isTenant;
+		this.isQueryCost = isQueryCost;
 	}
 
 	/**
@@ -49,11 +50,11 @@ public enum PolyLensSystemInfoMetric {
 	}
 
 	/**
-	 * Retrieves {@link #isTenant}
+	 * Retrieves {@link #isQueryCost}
 	 *
-	 * @return value of {@link #isTenant}
+	 * @return value of {@link #isQueryCost}
 	 */
-	public boolean isTenant() {
-		return isTenant;
+	public boolean isQueryCost() {
+		return isQueryCost;
 	}
 }

@@ -38,6 +38,7 @@ public class PolyLensConstant {
 	public static final String DEVICE_ID = "DeviceId";
 	public static final String NAME = "Name";
 	public static final String MODEL_GROUP = "Model#";
+	public static final String QUERY_COST_GROUP = "QueryCost#";
 	public static final String SYSTEM_STATUS_GROUP = "SystemStatus#";
 	public static final String CONNECTIONS_GROUP = "Connections#";
 	public static final String LOCATION_GROUP = "Location#";
@@ -136,6 +137,7 @@ public class PolyLensConstant {
 	public static final String PAGE_INFO = "pageInfo";
 	public static final String NEXT_TOKEN = "nextToken";
 	public static final String PAGE_SIZE = "pageSize";
+	public static final String TOTAL_COUNT = "totalCount";
 	public static final String FILTER = "filter";
 	public static final String PARAMS = "params";
 	public static final String EQ = "eq";
@@ -168,7 +170,7 @@ public class PolyLensConstant {
 	public static final String VARIABLES_FILTERING = "\"variables\":";
 	public static final String UTC = "UTC";
 	public static final String ZERO = "0";
-	public static final int NUMBER_OF_DEVICES = 99;
+	public static final int MAXIMUM_NUMBER_OF_DEVICES = 99;
 	public static final int ONE_THREAD = 1;
 	public static final int TWO_THREADS = 2;
 	public static final int HALF_AN_HOUR = 1800;
@@ -179,5 +181,5 @@ public class PolyLensConstant {
 	public static final String URL_GET_TOKEN = "https://login.silica-prod01.io.lens.poly.com/oauth/token";
 	public static final String DEFAULT_FORMAT_DATETIME = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
 	public static final String NEW_FORMAT_DATETIME = "EEE MMM dd HH:mm:ss z yyyy";
-	public static final int DEFAULT_POLLING_INTERVAL = 1;
+	public static final String UPDATE_INTERVAL = "UpdateInterval(minutes)";
 }
