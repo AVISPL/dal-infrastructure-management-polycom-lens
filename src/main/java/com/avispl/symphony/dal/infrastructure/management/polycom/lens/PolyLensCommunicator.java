@@ -1114,7 +1114,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		for (String value : arrayValueFiltering) {
 			ObjectNode node = jsonNodeFactory.objectNode();
 
-			if ((PolyLensConstant.NOT_SET.equals(value) && PolyLensConstant.ROOM.equals(name) ) || (PolyLensConstant.UNKNOWN.equals(value) && PolyLensConstant.SITE.equals(name))) {
+			if (PolyLensConstant.NOT_SET.equals(value) && PolyLensConstant.ROOM.equals(name) || PolyLensConstant.UNKNOWN.equals(value) && PolyLensConstant.SITE.equals(name)) {
 				node.put(PolyLensConstant.EXISTS, false);
 			} else {
 				node.put(PolyLensConstant.EQ, value);
