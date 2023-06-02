@@ -128,37 +128,48 @@ public class SystemInformation {
 
 		switch (name) {
 			case COUNT_DEVICES:
-				result = String.valueOf(this.getCountDevices());
+				result = checkObjectNull(this.getCountDevices());
 				break;
 			case TENANT_COUNT:
-				result = String.valueOf(this.getTenantCount());
+				result = checkObjectNull(this.getTenantCount());
 				break;
 			case QUERY_COST:
-				result = String.valueOf(this.getQueryCost().getQueryCost());
+				result = checkObjectNull(this.getQueryCost().getQueryCost());
 				break;
 			case COST_USED:
-				result = String.valueOf(this.getQueryCost().getCostUsed());
+				result = checkObjectNull(this.getQueryCost().getCostUsed());
 				break;
 			case COST_REMAINING:
-				result = String.valueOf(this.getQueryCost().getCostRemaining());
+				result = checkObjectNull(this.getQueryCost().getCostRemaining());
 				break;
 			case SECOND_TO_RESET:
-				result = String.valueOf(this.getQueryCost().getSecondsToReset());
+				result = checkObjectNull(this.getQueryCost().getSecondsToReset());
 				break;
 			case TENANT_ID:
-				result = String.valueOf(this.getTenants().get(0).getId());
+				result = checkObjectNull(this.getTenants().get(0).getId());
 				break;
 			case TENANT_NAME:
-				result = String.valueOf(this.getTenants().get(0).getName());
+				result = checkObjectNull(this.getTenants().get(0).getName());
 				break;
 			case TENANT_TYPE:
-				result = String.valueOf(this.getTenants().get(0).getType());
+				result = checkObjectNull(this.getTenants().get(0).getType());
 				break;
 			case TENANT_MEMBER_COUNT:
-				result = String.valueOf(this.getTenants().get(0).getMemberCount());
+				result = checkObjectNull(this.getTenants().get(0).getMemberCount());
 				break;
 		}
 		return result;
+	}
+
+	/**
+	 * Checks if an object is null and returns a string representation of the object.
+	 * If the object is null, it returns the constant "NONE".
+	 *
+	 * @param object the object to check for null
+	 * @return the string representation of the object or "NONE" if the object is null
+	 */
+	private String checkObjectNull(Object object) {
+		return (object == null) ? PolyLensConstant.NONE : String.valueOf(object);
 	}
 }
 
