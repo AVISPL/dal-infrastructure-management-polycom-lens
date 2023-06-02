@@ -51,7 +51,7 @@ public enum PolyLensAggregatedMetric {
 	SYSTEM_STATUS(PolyLensConstant.SYSTEM_STATUS),
 	LOCATION(PolyLensConstant.LOCATION),
 	BANDWIDTH(PolyLensConstant.BANDWIDTH),
-	CONNECTIONS(PolyLensConstant.CONNECTIONS),
+	LINKED_DEVICES(PolyLensConstant.LINKED_DEVICES),
 	ENTITLEMENTS(PolyLensConstant.ENTITLEMENTS),
 	;
 	private final String name;
