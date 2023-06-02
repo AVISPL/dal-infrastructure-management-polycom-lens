@@ -583,7 +583,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					}
 				} catch (SocketTimeoutException | ConnectException tex) {
 					if (this.logger.isDebugEnabled()) {
-						this.logger.error(String.format("F %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
+						this.logger.error(String.format("PING TIMEOUT: Connection to %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
 					}
 					throw new SocketTimeoutException("Connection timed out");
 				} catch (Exception e) {
