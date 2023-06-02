@@ -59,8 +59,8 @@ import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.Pol
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensProperties;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensQueries;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensSystemInfoMetric;
-import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.Connection;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.Entitlement;
+import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.LinkedDevice;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.system.SystemInformation;
 import com.avispl.symphony.dal.util.StringUtils;
 
@@ -190,7 +190,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				}
 				if (threadIndex == threadCount) {
 					threadIndex = 0;
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 30000;
+					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
 				}
 
 				if (logger.isDebugEnabled()) {
@@ -351,6 +351,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	private List<AggregatedDevice> aggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
 
 	/**
+	 * List of cached aggregated device
+	 */
+	private List<AggregatedDevice> cachedAggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
+
+	/**
 	 * List of System Response
 	 */
 	private SystemInformation systemInformation = new SystemInformation();
@@ -456,7 +461,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			populateSystemData(statistics);
 
 			threadCount = PolyLensConstant.ONE_THREAD;
-			if (systemInformation.getCountDevices() > pageSize) {
+			if (systemInformation.getCountDevices() != null && systemInformation.getCountDevices() > pageSize) {
 				threadCount = PolyLensConstant.TWO_THREADS;
 			}
 			extendedStatistics.setStatistics(statistics);
@@ -486,7 +491,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 			return cloneAndPopulateAggregatedDeviceList();
 		}
-		return aggregatedDeviceList;
+		return Collections.emptyList();
 	}
 
 	/**
@@ -578,7 +583,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					}
 				} catch (SocketTimeoutException | ConnectException tex) {
 					if (this.logger.isDebugEnabled()) {
-						this.logger.error(String.format("PING TIMEOUT: Connection to %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
+						this.logger.error(String.format("F %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
 					}
 					throw new SocketTimeoutException("Connection timed out");
 				} catch (Exception e) {
@@ -665,6 +670,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		systemInformation = null;
 		nextDevicesCollectionIterationTimestamp = 0;
 		aggregatedDeviceList.clear();
+		cachedAggregatedDeviceList.clear();
 		super.internalDestroy();
 	}
 
@@ -737,14 +743,12 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			JsonNode systemResponse = this.doPost(PolyLensConstant.URI_POLY_LENS, PolyLensProperties.SYSTEM_INFO.getCommand(), JsonNode.class);
 			JsonNode numberDevicesResponse = this.doPost(PolyLensConstant.URI_POLY_LENS, PolyLensQueries.NUMBER_AGGREGATED_DEVICES.replace(PolyLensConstant.VARIABLES, createVariableForFiltering()),
 					JsonNode.class);
-			if (systemResponse == null || numberDevicesResponse == null) {
-				throw new ResourceNotReachableException("Error while retrieving system information, the response is empty.");
-			}
 			systemInformation = objectMapper.treeToValue(systemResponse.get(PolyLensConstant.DATA), SystemInformation.class);
 			int numberDevice = numberDevicesResponse.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.PAGE_INFO).get(PolyLensConstant.TOTAL_COUNT).asInt();
 			systemInformation.setCountDevices(numberDevice);
 		} catch (Exception e) {
-			throw new ResourceNotReachableException("Error when get system information", e);
+			systemInformation = new SystemInformation();
+			logger.error(String.format("Error when get system information, %s", e));
 		}
 	}
 
@@ -761,7 +765,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 			JsonNode aggregatedDevice = this.doPost(PolyLensConstant.URI_POLY_LENS, query, JsonNode.class);
 			if (aggregatedDevice == null) {
-				throw new ResourceNotReachableException("Error while populate aggregated device, the response is empty.");
+				aggregatedDeviceList = cachedAggregatedDeviceList;
+				logger.error("Error while populate aggregated device, the response is empty.");
+				return;
 			}
 			JsonNode jsonArray = aggregatedDevice.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.EDGES);
 			nextToken = aggregatedDevice.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.PAGE_INFO).get(PolyLensConstant.NEXT_TOKEN).asText();
@@ -772,7 +778,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				aggregatedDeviceList.removeIf(item -> item.getDeviceId().equals(id));
 				aggregatedDeviceList.addAll(aggregatedDeviceProcessor.extractDevices(node));
 			}
+			cachedAggregatedDeviceList = aggregatedDeviceList;
 		} catch (Exception e) {
+			aggregatedDeviceList = cachedAggregatedDeviceList;
 			logger.error("Error while populate aggregated device", e);
 		}
 	}
@@ -823,9 +831,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 */
 	private Map<String, String> mapMonitoringProperty(Map<String, String> oldStats) {
 		Map<String, String> newProperties = new HashMap<>();
-		String connections = oldStats.get(PolyLensConstant.CONNECTIONS);
+		String linkedDevices = oldStats.get(PolyLensConstant.LINKED_DEVICES);
 		String entitlements = oldStats.get(PolyLensConstant.ENTITLEMENTS);
-		List<Connection> connectionList;
+		List<LinkedDevice> linkedDeviceList;
 		List<Entitlement> entitlementList;
 		String group;
 		for (PolyLensAggregatedMetric property : PolyLensAggregatedMetric.values()) {
@@ -839,21 +847,21 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 							getDefaultValueForNullData(oldStats.get(PolyLensConstant.MODEL_HARDWARE_MANUFACTURER_NAME)));
 					break;
 				case SYSTEM_STATUS:
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.PROVISIONING_STATE),
-							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.GLOBAL_DIRECTORY_STATE),
-							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.IP_NETWORK_STATE),
-							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.IP_NETWORK_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.TRACKABLE_CAMERA_STATE),
-							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.TRACKABLE_CAMERA_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.CAMERA_STATE),
-							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERA_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.AUDIO_STATE), removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.AUDIO_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.REMOTE_CONTROL_STATE),
-							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL_STATE))));
-					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.LOG_THRESHOLD_STATE),
-							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD_STATE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.PROVISIONING_SERVICE),
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.PROVISIONING_SERVICE))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.GLOBAL_DIRECTORY),
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.GLOBAL_DIRECTORY))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.LAN_NETWORK),
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LAN_NETWORK))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.BUILT_IN_CAMERA),
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BUILT_IN_CAMERA))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.CAMERAS),
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.CAMERAS))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.MICROPHONES), removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.MICROPHONES))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.REMOTE_CONTROL),
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.REMOTE_CONTROL))));
+					newProperties.put(PolyLensConstant.SYSTEM_STATUS_GROUP.concat(PolyLensConstant.LOG_THRESHOLD),
+							removeUnderscore(getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOG_THRESHOLD))));
 					break;
 				case LOCATION:
 					newProperties.put(PolyLensConstant.LOCATION_GROUP.concat(PolyLensConstant.LATITUDE), getDefaultValueForNullData(oldStats.get(PolyLensConstant.LOCATION_LATITUDE)));
@@ -871,22 +879,22 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					newProperties.put(PolyLensConstant.BANDWIDTH_GROUP.concat(PolyLensConstant.PING_LOSS_PERCENT),
 							getTwoDecimalPlaces(getDefaultValueForNullData(oldStats.get(PolyLensConstant.BANDWIDTH_PING_LOSS_PERCENT))));
 					break;
-				case CONNECTIONS:
+				case LINKED_DEVICES:
 					try {
-						connectionList = objectMapper.readValue(connections, new TypeReference<List<Connection>>() {
+						linkedDeviceList = objectMapper.readValue(linkedDevices, new TypeReference<List<LinkedDevice>>() {
 						});
-						if (connectionList.isEmpty()) {
-							populateNoneDataForConnectionGroup(newProperties);
+						if (linkedDeviceList.isEmpty()) {
+							populateNoneDataForLinkedDeviceGroup(newProperties);
 						} else {
-							for (int i = 0; i < connectionList.size(); i++) {
-								group = PolyLensConstant.CONNECTION + formatOrderNumber(i, connectionList.size());
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.NAME, getDefaultValueForNullData(connectionList.get(i).getName()));
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.MAC, getDefaultValueForNullData(connectionList.get(i).getMacAddress()));
-								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.SOFTWARE_VERSION, getDefaultValueForNullData(connectionList.get(i).getSoftwareVersion()));
+							for (int i = 0; i < linkedDeviceList.size(); i++) {
+								group = PolyLensConstant.LINKED_DEVICE + formatOrderNumber(i, linkedDeviceList.size());
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.NAME, getDefaultValueForNullData(linkedDeviceList.get(i).getName()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.MAC, getDefaultValueForNullData(linkedDeviceList.get(i).getMacAddress()));
+								newProperties.put(group + PolyLensConstant.HASH + PolyLensConstant.SOFTWARE_VERSION, getDefaultValueForNullData(linkedDeviceList.get(i).getSoftwareVersion()));
 							}
 						}
 					} catch (Exception e) {
-						populateNoneDataForConnectionGroup(newProperties);
+						populateNoneDataForLinkedDeviceGroup(newProperties);
 					}
 					break;
 				case ENTITLEMENTS:
@@ -951,16 +959,16 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * Populates none data for the connection group in the given stats map.
-	 * The connection group includes information about the name, MAC address, and software version.
+	 * Populates none data for the linked device group in the given stats map.
+	 * The linked device group includes information about the name, MAC address, and software version.
 	 * This method sets the corresponding values in the stats map to "NONE" to indicate that no data is available for these fields.
 	 *
-	 * @param stats The map containing the connection group statistics.
+	 * @param stats The map containing the linked device group statistics.
 	 */
-	private void populateNoneDataForConnectionGroup(Map<String, String> stats) {
-		stats.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.NAME, PolyLensConstant.NONE);
-		stats.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.MAC, PolyLensConstant.NONE);
-		stats.put(PolyLensConstant.CONNECTIONS_GROUP + PolyLensConstant.SOFTWARE_VERSION, PolyLensConstant.NONE);
+	private void populateNoneDataForLinkedDeviceGroup(Map<String, String> stats) {
+		stats.put(PolyLensConstant.LINKED_DEVICE_GROUP + PolyLensConstant.NAME, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.LINKED_DEVICE_GROUP + PolyLensConstant.MAC, PolyLensConstant.NONE);
+		stats.put(PolyLensConstant.LINKED_DEVICE_GROUP + PolyLensConstant.SOFTWARE_VERSION, PolyLensConstant.NONE);
 	}
 
 	/**
@@ -1200,6 +1208,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @return The estimated time in minutes.
 	 */
 	private String getMinutesToGetAllDevices() {
+		if (systemInformation.getCountDevices() == null) {
+			return PolyLensConstant.NONE;
+		}
 		int result = systemInformation.getCountDevices() / (pageSize * 2);
 		if (systemInformation.getCountDevices() % (pageSize * 2) != 0) {
 			result++;

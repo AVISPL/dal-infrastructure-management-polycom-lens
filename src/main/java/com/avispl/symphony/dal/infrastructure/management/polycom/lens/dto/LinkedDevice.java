@@ -11,7 +11,7 @@ package com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto;
  * Created on 4/21/2023
  * @since 1.0.0
  */
-public class Connection {
+public class LinkedDevice {
 	private String name;
 	private String macAddress;
 	private String softwareVersion;
