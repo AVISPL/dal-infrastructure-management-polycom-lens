@@ -35,7 +35,7 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.setHost("api.silica-prod01.io.lens.poly.com");
 		polyLensCommunicator.setPort(443);
 		polyLensCommunicator.setLogin("Zcj4Xm5D7DNOlAldItivfE2DIrhyDvDq");
-		polyLensCommunicator.setPassword("***REMOVED***");
+		polyLensCommunicator.setPassword("JS2cyHu2BIBYCiIpmF0qBztM5PxPpA_9zZrHQqaNttdn47Wk");
 		polyLensCommunicator.init();
 		polyLensCommunicator.connect();
 	}
