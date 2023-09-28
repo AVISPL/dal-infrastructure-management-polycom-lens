@@ -9,7 +9,7 @@ package com.avispl.symphony.dal.infrastructure.management.polycom.lens.common;
  *
  * @author Harry / Symphony Dev Team<br>
  * Created on 4/11/2023
- * @since 1.0.0
+ * @since 1.0.1
  */
 public class PolyLensConstant {
 	public static final String SYSTEM_INFO = "SystemInformation";
@@ -178,7 +178,9 @@ public class PolyLensConstant {
 	public static final String DOT = ".";
 	public static final String SPACE = " ";
 	public static final String UNDERSCORE = "_";
-	public static final String URL_GET_TOKEN = "https://login.silica-prod01.io.lens.poly.com/oauth/token";
+	public static final String OAUTH_TOKEN = "/oauth/token";
+	public static final String URL_LOGIN = "https://login";
+	public static final String API = "api";
 	public static final String DEFAULT_FORMAT_DATETIME = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
 	public static final String NEW_FORMAT_DATETIME = "EEE MMM dd HH:mm:ss z yyyy";
 	public static final String UPDATE_INTERVAL = "UpdateInterval(minutes)";
