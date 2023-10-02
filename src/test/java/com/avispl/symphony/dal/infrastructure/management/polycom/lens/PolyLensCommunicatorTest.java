@@ -4,12 +4,15 @@
 
 package com.avispl.symphony.dal.infrastructure.management.polycom.lens;
 
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 
+import javax.security.auth.login.FailedLoginException;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
@@ -21,10 +24,11 @@ import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.Pol
  * Unit test for {@link PolyLensCommunicator}.
  * Test monitoring data with all systems and aggregator device
  *
- * @author Ivan, Harry
- * @version 2.0.0
- * @since 2.0.0
+ * @author Harry, Kevin
+ * @version 1.0.1
+ * @since 1.0.1
  */
+@Tag("RealDevice")
 class PolyLensCommunicatorTest {
 	private ExtendedStatistics extendedStatistic;
 	private PolyLensCommunicator polyLensCommunicator;
@@ -213,5 +217,33 @@ class PolyLensCommunicatorTest {
 		Thread.sleep(30000);
 		List<AggregatedDevice> aggregatedDeviceList = polyLensCommunicator.retrieveMultipleStatistics();
 		Assert.assertEquals(2, aggregatedDeviceList.size());
+	}
+
+	/**
+	 * Test config Unknow host name
+	 *
+	 * Expect Throw an exception
+	 */
+	@Test
+	void testUnknowHostName() throws Exception {
+		polyLensCommunicator.destroy();
+		polyLensCommunicator.setHost("api.silica-prod01.io.lens.poly.com1");
+		polyLensCommunicator.init();
+		polyLensCommunicator.connect();
+		Assert.assertThrows("Error because config unknow host name ", UnknownHostException.class, () -> polyLensCommunicator.ping());
+	}
+
+	/**
+	 * Test valid host name but config can't Poly lens host
+	 *
+	 * Expect Throw an LoginFailed exception
+	 */
+	@Test
+	void testValidHostName() throws Exception {
+		polyLensCommunicator.destroy();
+		polyLensCommunicator.setHost("google.com");
+		polyLensCommunicator.init();
+		polyLensCommunicator.connect();
+		Assert.assertThrows("Error because login failed due to incorrect host name", FailedLoginException.class, () -> polyLensCommunicator.getMultipleStatistics());
 	}
 }
