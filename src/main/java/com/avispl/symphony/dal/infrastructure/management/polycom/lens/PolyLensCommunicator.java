@@ -45,6 +45,7 @@ import javax.security.auth.login.FailedLoginException;
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
+import com.avispl.symphony.api.dal.dto.monitor.EndpointStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
@@ -490,8 +491,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			} else {
 				throw new FailedLoginException("Can't get token from client id and client secret");
 			}
-			if (aggregatedDeviceList.isEmpty()) {
-				return aggregatedDeviceList;
+			if (cachedAggregatedDeviceList.isEmpty()) {
+				return cachedAggregatedDeviceList;
 			}
 			return cloneAndPopulateAggregatedDeviceList();
 		}
@@ -775,7 +776,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 			JsonNode aggregatedDevice = this.doPost(PolyLensConstant.URI_POLY_LENS, query, JsonNode.class);
 			if (aggregatedDevice == null) {
-				aggregatedDeviceList = cachedAggregatedDeviceList;
 				logger.error("Error while populate aggregated device, the response is empty.");
 				return;
 			}
@@ -785,12 +785,10 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				JsonNode node = objectMapper.createArrayNode().add(jsonNode.get(PolyLensConstant.NODE));
 
 				String id = jsonNode.get(PolyLensConstant.NODE).get(PolyLensConstant.ID).asText();
-				aggregatedDeviceList.removeIf(item -> item.getDeviceId().equals(id));
-				aggregatedDeviceList.addAll(aggregatedDeviceProcessor.extractDevices(node));
+				cachedAggregatedDeviceList.removeIf(item -> item.getDeviceId().equals(id));
+				cachedAggregatedDeviceList.addAll(aggregatedDeviceProcessor.extractDevices(node));
 			}
-			cachedAggregatedDeviceList = aggregatedDeviceList;
 		} catch (Exception e) {
-			aggregatedDeviceList = cachedAggregatedDeviceList;
 			logger.error("Error while populate aggregated device", e);
 		}
 	}
@@ -802,22 +800,86 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @return List<AggregatedDevice> aggregated device list
 	 */
 	private List<AggregatedDevice> cloneAndPopulateAggregatedDeviceList() {
-		List<AggregatedDevice> resultAggregatedDeviceList = new ArrayList<>();
 		synchronized (aggregatedDeviceList) {
-			for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
+			for (AggregatedDevice aggregatedDevice : cachedAggregatedDeviceList) {
 				Map<String, String> stats = aggregatedDevice.getProperties();
 				List<AdvancedControllableProperty> controllableProperties = aggregatedDevice.getControllableProperties();
 				stats = mapMonitoringProperty(stats);
-				if (aggregatedDevice.getDeviceOnline()) {
+				if (Boolean.TRUE.equals(aggregatedDevice.getDeviceOnline())) {
 					createControl(controllableProperties, stats);
 				}
 
-				aggregatedDevice.setProperties(stats);
-				aggregatedDevice.setControllableProperties(controllableProperties);
-				resultAggregatedDeviceList.add(aggregatedDevice);
+				Optional<AggregatedDevice> optionalDevice = aggregatedDeviceList.stream()
+						.filter(device -> device.getDeviceId().equals(aggregatedDevice.getDeviceId())).findFirst();
+				AggregatedDevice device = optionalDevice.orElse(new AggregatedDevice());
+
+				device.setDeviceId(aggregatedDevice.getDeviceId());
+				device.setDeviceModel(aggregatedDevice.getDeviceModel());
+				device.setDeviceOnline(aggregatedDevice.getDeviceOnline());
+				device.setDeviceName(aggregatedDevice.getDeviceName());
+				device.setSerialNumber(aggregatedDevice.getSerialNumber());
+				device.setMacAddresses(aggregatedDevice.getMacAddresses());
+				String inCallStatus = getDefaultValueForNullData(stats.get(PolyLensAggregatedMetric.CALL_STATUS.getName()));
+				//InCallStatus: IN_CALL, NOT_IN_CALL, UNSUPPORTED, UNKNOWN
+				setInCall(device, "IN_CALL".equalsIgnoreCase(inCallStatus));
+				device.setProperties(stats);
+				device.setControllableProperties(controllableProperties);
+				addOrUpdateAggregatedDevice(device);
 			}
 		}
-		return resultAggregatedDeviceList;
+		if (systemInformation.getCountDevices() < cachedAggregatedDeviceList.size()) {
+			cachedAggregatedDeviceList.clear();
+		}
+		return aggregatedDeviceList;
+	}
+
+	/**
+	 * Adds or updates the aggregated device in the aggregated device list.
+	 *
+	 * @param aggregatedDevice The aggregated device to be added or updated.
+	 */
+	private void addOrUpdateAggregatedDevice(AggregatedDevice aggregatedDevice) {
+		boolean isExist = aggregatedDeviceList.stream().anyMatch(dev -> dev.getDeviceId().equals(aggregatedDevice.getDeviceId()));
+		if (isExist) {
+			aggregatedDeviceList.removeIf(dev -> dev.getDeviceId().equals(aggregatedDevice.getDeviceId()));
+		}
+		aggregatedDeviceList.add(aggregatedDevice);
+	}
+
+	/**
+	 * Set zoom room in call status
+	 *
+	 * @param device device to change inCall status for
+	 * @param inCall whether the device is in call or not
+	 */
+	private void setInCall(AggregatedDevice device, boolean inCall) {
+		List<Statistics> statistics = device.getMonitoredStatistics();
+		if (inCall) {
+			if (statistics == null) {
+				statistics = new ArrayList<>();
+				device.setMonitoredStatistics(statistics);
+			}
+			boolean deviceHasEndpointStatistics = false;
+			for (Statistics statsEntry : statistics) {
+				if (statsEntry instanceof EndpointStatistics) {
+					deviceHasEndpointStatistics = true;
+					((EndpointStatistics) statsEntry).setInCall(true);
+				}
+			}
+			if (!deviceHasEndpointStatistics) {
+				EndpointStatistics endpointStatistics = new EndpointStatistics();
+				endpointStatistics.setInCall(true);
+				statistics.add(endpointStatistics);
+			}
+		} else {
+			if (statistics != null) {
+				for (Statistics statsEntry : statistics) {
+					if (statsEntry instanceof EndpointStatistics) {
+						((EndpointStatistics) statsEntry).setInCall(false);
+					}
+				}
+			}
+		}
 	}
 
 	/**
