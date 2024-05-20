@@ -156,7 +156,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				try {
 					TimeUnit.MILLISECONDS.sleep(500);
 				} catch (InterruptedException e) {
-					// Ignore for now
+					logger.info("Ignore for now");
 				}
 
 				if (!inProgress) {
@@ -188,7 +188,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					try {
 						TimeUnit.MILLISECONDS.sleep(1000);
 					} catch (InterruptedException e) {
-						//
+						logger.info("Ignore for now");
 					}
 				}
 				if (threadIndex == threadCount) {
