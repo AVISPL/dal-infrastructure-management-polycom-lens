@@ -71,7 +71,7 @@ public enum PolyLensProperties {
 	 * @throws IllegalStateException if no constant with the specified name is found
 	 */
 	public static PolyLensProperties getByName(String name) {
-		Optional<PolyLensProperties> property = Arrays.stream(PolyLensProperties.values()).filter(group -> group.getName().equals(name)).findFirst();
+		Optional<PolyLensProperties> property = Arrays.stream(values()).filter(group -> group.getName().equals(name)).findFirst();
 		if (property.isPresent()) {
 			return property.get();
 		} else {
