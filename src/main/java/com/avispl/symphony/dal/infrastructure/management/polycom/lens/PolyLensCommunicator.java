@@ -796,12 +796,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		synchronized (aggregatedDeviceList) {
 			for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
 				Map<String, String> stats = aggregatedDevice.getProperties();
-				List<AdvancedControllableProperty> controllableProperties = aggregatedDevice.getControllableProperties();
+				List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
 				stats = mapMonitoringProperty(stats);
 				if (aggregatedDevice.getDeviceOnline()) {
 					createControl(controllableProperties, stats);
 				}
-
 				aggregatedDevice.setProperties(stats);
 				aggregatedDevice.setControllableProperties(controllableProperties);
 				resultAggregatedDeviceList.add(aggregatedDevice);
@@ -820,10 +819,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		stats.put(PolyLensConstant.REBOOT_DEVICE, PolyLensConstant.EMPTY);
 		AdvancedControllableProperty restartButton = createButton(PolyLensConstant.REBOOT_DEVICE, PolyLensConstant.REBOOT, PolyLensConstant.REBOOTING,
 				PolyLensConstant.GRACE_PERIOD);
-		boolean controlExists = controllableProperties.stream().anyMatch(controllableProperty -> PolyLensConstant.REBOOT_DEVICE.equals(controllableProperty.getName()));
-		if (!controlExists) {
-			controllableProperties.add(restartButton);
-		}
+		controllableProperties.add(restartButton);
 	}
 
 	/**
