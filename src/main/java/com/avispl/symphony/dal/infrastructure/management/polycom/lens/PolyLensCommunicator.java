@@ -820,7 +820,10 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		stats.put(PolyLensConstant.REBOOT_DEVICE, PolyLensConstant.EMPTY);
 		AdvancedControllableProperty restartButton = createButton(PolyLensConstant.REBOOT_DEVICE, PolyLensConstant.REBOOT, PolyLensConstant.REBOOTING,
 				PolyLensConstant.GRACE_PERIOD);
-		controllableProperties.add(restartButton);
+		boolean controlExists = controllableProperties.stream().anyMatch(controllableProperty -> PolyLensConstant.REBOOT_DEVICE.equals(controllableProperty.getName()));
+		if (!controlExists) {
+			controllableProperties.add(restartButton);
+		}
 	}
 
 	/**
