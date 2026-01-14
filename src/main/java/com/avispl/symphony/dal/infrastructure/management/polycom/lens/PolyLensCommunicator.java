@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,10 +40,12 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import javax.security.auth.login.FailedLoginException;
 
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
+import com.avispl.symphony.api.dal.dto.monitor.EndpointStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
@@ -129,7 +132,7 @@ import com.avispl.symphony.dal.util.StringUtils;
  *
  * @author Harry / Symphony Dev Team<br>
  * Created on 4/11/2023
- * @since 1.0.0
+ * @since 1.0.1
  */
 public class PolyLensCommunicator extends RestCommunicator implements Aggregator, Monitorable, Controller {
 	/**
@@ -231,7 +234,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	/**
 	 * number of devices obtained in 1 request
 	 */
-	private int pageSize = PolyLensConstant.MAXIMUM_NUMBER_OF_DEVICES;
+	private final int pageSize = PolyLensConstant.MAXIMUM_NUMBER_OF_DEVICES;
 
 	/**
 	 * A private final ReentrantLock instance used to provide exclusive access to a shared resource
@@ -256,7 +259,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	/**
 	 * An instance of the AggregatedDeviceProcessor class used to process and aggregate device-related data.
 	 */
-	private AggregatedDeviceProcessor aggregatedDeviceProcessor;
+	private final AggregatedDeviceProcessor aggregatedDeviceProcessor;
 
 	/**
 	 * A private field that represents an instance of the PolyLensDataLoader class, which is responsible for loading device data for PolyLens.
@@ -449,7 +452,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * get System Information of Aggregator Adapter
 	 */
 	@Override
-	public List<Statistics> getMultipleStatistics() {
+	public List<Statistics> getMultipleStatistics() throws Exception {
 		reentrantLock.lock();
 		try {
 			if (!checkValidApiToken()) {
@@ -476,7 +479,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * get information of aggregated device
 	 */
 	@Override
-	public List<AggregatedDevice> retrieveMultipleStatistics() {
+	public List<AggregatedDevice> retrieveMultipleStatistics() throws Exception {
 		if (systemInformation.getCountDevices() != null) {
 			if (checkValidApiToken()) {
 				if (executorService == null) {
@@ -485,9 +488,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				}
 				nextDevicesCollectionIterationTimestamp = System.currentTimeMillis();
 				updateValidRetrieveStatisticsTimestamp();
+			} else {
+				throw new FailedLoginException("Can't get token from client id and client secret");
 			}
-			if (aggregatedDeviceList.isEmpty()) {
-				return aggregatedDeviceList;
+			if (cachedAggregatedDeviceList.isEmpty()) {
+				return cachedAggregatedDeviceList;
 			}
 			return cloneAndPopulateAggregatedDeviceList();
 		}
@@ -498,7 +503,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * {@inheritDoc}
 	 */
 	@Override
-	public List<AggregatedDevice> retrieveMultipleStatistics(List<String> listDeviceId) {
+	public List<AggregatedDevice> retrieveMultipleStatistics(List<String> listDeviceId) throws Exception {
 		return retrieveMultipleStatistics().stream().filter(aggregatedDevice -> listDeviceId.contains(aggregatedDevice.getDeviceId())).collect(Collectors.toList());
 	}
 
@@ -586,6 +591,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 						this.logger.error(String.format("PING TIMEOUT: Connection to %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
 					}
 					throw new SocketTimeoutException("Connection timed out");
+				} catch (UnknownHostException ex) {
+					throw new UnknownHostException(String.format("Connection timed out, UNKNOWN host %s", host));
 				} catch (Exception e) {
 					if (this.logger.isDebugEnabled()) {
 						this.logger.error(String.format("PING TIMEOUT: Connection to %s did not succeed, UNKNOWN ERROR %s: ", host, e.getMessage()));
@@ -678,9 +685,10 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * Check API token validation
 	 * If the token expires, we send a request to get a new token
 	 *
-	 * @return boolean
+	 * @return boolean True if valid user information, and vice versa.
+	 * @throws throw an FailedLogin exception when token retrieval fails.
 	 */
-	private boolean checkValidApiToken() {
+	private boolean checkValidApiToken() throws Exception {
 		if (StringUtils.isNullOrEmpty(getLogin()) || StringUtils.isNullOrEmpty(getPassword())) {
 			return false;
 		}
@@ -713,16 +721,19 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
-	 * get Token from Poly Lens
+	 * Get Token from Poly Lens
 	 *
 	 * @return new token
+	 * @throws throw an FailedLogin exception when token retrieval fails.
 	 */
-	private String getToken() {
+	private String getToken() throws Exception {
 		String token;
 		String body = String.format("{\"client_id\":\"%s\",\"client_secret\":\"%s\",\"grant_type\":\"%s\"}",
 				this.getLogin(), this.getPassword(), PolyLensConstant.GRANT_TYPE);
 		try {
-			JsonNode response = doPost(PolyLensConstant.URL_GET_TOKEN, body, JsonNode.class);
+			String urlToken = !host.startsWith(PolyLensConstant.API) ? host :
+					PolyLensConstant.URL_LOGIN + host.substring(PolyLensConstant.API.length()) + PolyLensConstant.OAUTH_TOKEN;
+			JsonNode response = doPost(urlToken, body, JsonNode.class);
 			if (response.size() == 1) {
 				throw new IllegalArgumentException("ClientId and ClientSecret are not correct");
 			}
@@ -730,7 +741,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			token = response.get(PolyLensConstant.ACCESS_TOKEN).asText();
 			expiresIn = (response.get(PolyLensConstant.EXPIRES_IN).asLong() - PolyLensConstant.HALF_AN_HOUR) * 1000;
 		} catch (Exception e) {
-			throw new ResourceNotReachableException("Can't get token from client id and client secret", e);
+			String message = String.format("Failed to retrieve an access token for account with from client id and client secret. Please check client id and client secret");
+			throw new FailedLoginException(message);
 		}
 		return token;
 	}
@@ -747,8 +759,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			int numberDevice = numberDevicesResponse.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.PAGE_INFO).get(PolyLensConstant.TOTAL_COUNT).asInt();
 			systemInformation.setCountDevices(numberDevice);
 		} catch (Exception e) {
-			systemInformation = new SystemInformation();
-			logger.error(String.format("Error when get system information, %s", e));
+			throw new ResourceNotReachableException("Error when get system information.", e);
 		}
 	}
 
@@ -765,7 +776,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 			JsonNode aggregatedDevice = this.doPost(PolyLensConstant.URI_POLY_LENS, query, JsonNode.class);
 			if (aggregatedDevice == null) {
-				aggregatedDeviceList = cachedAggregatedDeviceList;
 				logger.error("Error while populate aggregated device, the response is empty.");
 				return;
 			}
@@ -775,12 +785,10 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				JsonNode node = objectMapper.createArrayNode().add(jsonNode.get(PolyLensConstant.NODE));
 
 				String id = jsonNode.get(PolyLensConstant.NODE).get(PolyLensConstant.ID).asText();
-				aggregatedDeviceList.removeIf(item -> item.getDeviceId().equals(id));
-				aggregatedDeviceList.addAll(aggregatedDeviceProcessor.extractDevices(node));
+				cachedAggregatedDeviceList.removeIf(item -> item.getDeviceId().equals(id));
+				cachedAggregatedDeviceList.addAll(aggregatedDeviceProcessor.extractDevices(node));
 			}
-			cachedAggregatedDeviceList = aggregatedDeviceList;
 		} catch (Exception e) {
-			aggregatedDeviceList = cachedAggregatedDeviceList;
 			logger.error("Error while populate aggregated device", e);
 		}
 	}
@@ -792,21 +800,86 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @return List<AggregatedDevice> aggregated device list
 	 */
 	private List<AggregatedDevice> cloneAndPopulateAggregatedDeviceList() {
-		List<AggregatedDevice> resultAggregatedDeviceList = new ArrayList<>();
 		synchronized (aggregatedDeviceList) {
-			for (AggregatedDevice aggregatedDevice : aggregatedDeviceList) {
+			for (AggregatedDevice aggregatedDevice : cachedAggregatedDeviceList) {
 				Map<String, String> stats = aggregatedDevice.getProperties();
 				List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
 				stats = mapMonitoringProperty(stats);
-				if (aggregatedDevice.getDeviceOnline()) {
+				if (Boolean.TRUE.equals(aggregatedDevice.getDeviceOnline())) {
 					createControl(controllableProperties, stats);
 				}
-				aggregatedDevice.setProperties(stats);
-				aggregatedDevice.setControllableProperties(controllableProperties);
-				resultAggregatedDeviceList.add(aggregatedDevice);
+
+				Optional<AggregatedDevice> optionalDevice = aggregatedDeviceList.stream()
+						.filter(device -> device.getDeviceId().equals(aggregatedDevice.getDeviceId())).findFirst();
+				AggregatedDevice device = optionalDevice.orElse(new AggregatedDevice());
+
+				device.setDeviceId(aggregatedDevice.getDeviceId());
+				device.setDeviceModel(aggregatedDevice.getDeviceModel());
+				device.setDeviceOnline(aggregatedDevice.getDeviceOnline());
+				device.setDeviceName(aggregatedDevice.getDeviceName());
+				device.setSerialNumber(aggregatedDevice.getSerialNumber());
+				device.setMacAddresses(aggregatedDevice.getMacAddresses());
+				String inCallStatus = getDefaultValueForNullData(stats.get(PolyLensAggregatedMetric.CALL_STATUS.getName()));
+				//InCallStatus: IN_CALL, NOT_IN_CALL, UNSUPPORTED, UNKNOWN
+				setInCall(device, "IN_CALL".equalsIgnoreCase(inCallStatus));
+				device.setProperties(stats);
+				device.setControllableProperties(controllableProperties);
+				addOrUpdateAggregatedDevice(device);
 			}
 		}
-		return resultAggregatedDeviceList;
+		if (systemInformation.getCountDevices() < cachedAggregatedDeviceList.size()) {
+			cachedAggregatedDeviceList.clear();
+		}
+		return aggregatedDeviceList;
+	}
+
+	/**
+	 * Adds or updates the aggregated device in the aggregated device list.
+	 *
+	 * @param aggregatedDevice The aggregated device to be added or updated.
+	 */
+	private void addOrUpdateAggregatedDevice(AggregatedDevice aggregatedDevice) {
+		boolean isExist = aggregatedDeviceList.stream().anyMatch(dev -> dev.getDeviceId().equals(aggregatedDevice.getDeviceId()));
+		if (isExist) {
+			aggregatedDeviceList.removeIf(dev -> dev.getDeviceId().equals(aggregatedDevice.getDeviceId()));
+		}
+		aggregatedDeviceList.add(aggregatedDevice);
+	}
+
+	/**
+	 * Set zoom room in call status
+	 *
+	 * @param device device to change inCall status for
+	 * @param inCall whether the device is in call or not
+	 */
+	private void setInCall(AggregatedDevice device, boolean inCall) {
+		List<Statistics> statistics = device.getMonitoredStatistics();
+		if (inCall) {
+			if (statistics == null) {
+				statistics = new ArrayList<>();
+				device.setMonitoredStatistics(statistics);
+			}
+			boolean deviceHasEndpointStatistics = false;
+			for (Statistics statsEntry : statistics) {
+				if (statsEntry instanceof EndpointStatistics) {
+					deviceHasEndpointStatistics = true;
+					((EndpointStatistics) statsEntry).setInCall(true);
+				}
+			}
+			if (!deviceHasEndpointStatistics) {
+				EndpointStatistics endpointStatistics = new EndpointStatistics();
+				endpointStatistics.setInCall(true);
+				statistics.add(endpointStatistics);
+			}
+		} else {
+			if (statistics != null) {
+				for (Statistics statsEntry : statistics) {
+					if (statsEntry instanceof EndpointStatistics) {
+						((EndpointStatistics) statsEntry).setInCall(false);
+					}
+				}
+			}
+		}
 	}
 
 	/**
