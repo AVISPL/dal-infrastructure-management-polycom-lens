@@ -156,7 +156,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				try {
 					TimeUnit.MILLISECONDS.sleep(500);
 				} catch (InterruptedException e) {
-					logger.info("Ignore it for now because the interrupted exception was caught, but no extra action is required");
+					logger.warn("Startup idle period is interrupted.", e);
 				}
 
 				if (!inProgress) {
@@ -188,7 +188,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					try {
 						TimeUnit.MILLISECONDS.sleep(1000);
 					} catch (InterruptedException e) {
-						logger.info("Ignore it for now because the interrupted exception was caught, but no extra action is required");
+						logger.warn("Idle period before new monitoring cycle is interrupted.", e);
 					}
 				}
 				if (threadIndex == threadCount) {
@@ -803,7 +803,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		synchronized (aggregatedDeviceList) {
 			for (AggregatedDevice aggregatedDevice : cachedAggregatedDeviceList) {
 				Map<String, String> stats = aggregatedDevice.getProperties();
-				List<AdvancedControllableProperty> controllableProperties = aggregatedDevice.getControllableProperties();
+				List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
 				stats = mapMonitoringProperty(stats);
 				if (Boolean.TRUE.equals(aggregatedDevice.getDeviceOnline())) {
 					createControl(controllableProperties, stats);
