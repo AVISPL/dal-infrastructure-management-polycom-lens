@@ -6,7 +6,7 @@
 
   <groupId>com.avispl.symphony.dal.infrastructure.management.polycom.lens</groupId>
   <artifactId>symphony-dal-infrastructure-management-polycom-lens</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
 
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -81,23 +81,23 @@
     <dependency>
       <groupId>com.avispl.symphony.api</groupId>
       <artifactId>symphony-api-commons</artifactId>
-      <version>5.12.0</version>
+      <version>RELEASE</version>
       <scope>system</scope>
-      <systemPath>${basedir}/lib/symphony-api-commons-5.12.0.jar</systemPath>
+      <systemPath>${basedir}/lib/symphony-api-commons-6.2.0.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.avispl.symphony.api</groupId>
       <artifactId>symphony-api-dal</artifactId>
-      <version>5.12.0</version>
+      <version>RELEASE</version>
       <scope>system</scope>
-      <systemPath>${basedir}/lib/symphony-api-dal-5.12.0.jar</systemPath>
+      <systemPath>${basedir}/lib/symphony-api-dal-6.3.0.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>com.avispl.symphony.dal</groupId>
       <artifactId>symphony-dal-commons</artifactId>
-      <version>5.12.0</version>
+      <version>RELEASE</version>
       <scope>system</scope>
-      <systemPath>${basedir}/lib/symphony-dal-commons-5.12.0.jar</systemPath>
+      <systemPath>${basedir}/lib/symphony-dal-commons-6.3.0.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>org.icmp4j</groupId>
@@ -110,13 +110,13 @@
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-expression</artifactId>
-      <version>5.2.25.RELEASE</version>
+      <version>6.2.1</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
-      <version>5.2.25.RELEASE</version>
+      <version>6.2.1</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -162,9 +162,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-      <version>4.5.14</version>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+      <version>5.4.4</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -220,7 +220,7 @@
     <dependency>
       <groupId>com.github.tomakehurst</groupId>
       <artifactId>wiremock-jre8</artifactId>
-      <version>2.31.0</version>
+      <version>2.35.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
