@@ -12,10 +12,16 @@ package com.avispl.symphony.dal.infrastructure.management.polycom.lens.common;
  * @since 1.0.1
  */
 public class PolyLensConstant {
+	//	[General] Adapter metadata properties
+	public static final String ADAPTER_BUILD_DATE = "AdapterBuildDate";
+	public static final String ADAPTER_UPTIME = "AdapterUptime";
+	public static final String ADAPTER_UPTIME_MIN = "AdapterUptime(min)";
+	public static final String ADAPTER_VERSION = "AdapterVersion";
+	public static final String LAST_MONITORING_CYCLE_DURATION = "LastMonitoringCycleDuration(sec)";
+	public static final String MONITORED_DEVICES_TOTAL = "MonitoredDevicesTotal";
+	public static final String MONITORING_CYCLE_INTERVAL = "MonitoringCycleInterval(min)";
+
 	public static final String SYSTEM_INFO = "SystemInformation";
-	public static final String COUNT_DEVICES = "CountDevices";
-	public static final String GATE_WAY_ID = "GatewayId";
-	public static final String IP = "IP";
 	public static final String QUERY_COST = "QueryCost";
 	public static final String COST_USED = "CostUsed";
 	public static final String COST_REMAINING = "CostRemaining";
@@ -24,7 +30,6 @@ public class PolyLensConstant {
 	public static final String TENANT_ID = "TenantID";
 	public static final String TENANT_NAME = "TenantName";
 	public static final String TENANT_TYPE = "TenantType";
-	public static final String TENANT_DEVICE_COUNT = "TenantDeviceCount";
 	public static final String TENANT_MEMBER_COUNT = "TenantMemberCount";
 	public static final String MODEL_MAPPING_AGGREGATED_DEVICE = "polylens/model-mapping.yml";
 	public static final String URI_POLY_LENS = "graphql";
@@ -33,9 +38,7 @@ public class PolyLensConstant {
 	public static final String EDGES = "edges";
 	public static final String NODE = "node";
 	public static final String ID = "id";
-	public static final String DEVICE = "device";
 	public static final String NONE = "None";
-	public static final String DEVICE_ID = "DeviceId";
 	public static final String NAME = "Name";
 	public static final String MODEL_GROUP = "Model#";
 	public static final String QUERY_COST_GROUP = "QueryCost#";
@@ -123,7 +126,6 @@ public class PolyLensConstant {
 	public static final String LINKED_DEVICES = "LinkedDevices";
 	public static final String ENTITLEMENTS = "Entitlements";
 	public static final int GRACE_PERIOD = 0;
-	public static final String CONTROL_GROUP = "Control#";
 	public static final String REBOOT = "Reboot";
 	public static final String REBOOTING = "Rebooting";
 	public static final String REBOOT_DEVICE = "RebootDevice";
@@ -183,5 +185,5 @@ public class PolyLensConstant {
 	public static final String API = "api";
 	public static final String DEFAULT_FORMAT_DATETIME = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
 	public static final String NEW_FORMAT_DATETIME = "EEE MMM dd HH:mm:ss z yyyy";
-	public static final String UPDATE_INTERVAL = "UpdateInterval(minutes)";
+	public static final String NOT_AVAILABLE = "N/A";
 }
