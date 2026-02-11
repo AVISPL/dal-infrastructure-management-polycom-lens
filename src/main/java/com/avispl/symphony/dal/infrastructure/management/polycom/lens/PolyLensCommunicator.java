@@ -155,7 +155,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		public void run() {
 			loop:
 			while (inProgress) {
-				long startCycle = System.currentTimeMillis();
 				try {
 					TimeUnit.MILLISECONDS.sleep(500);
 				} catch (InterruptedException e) {
@@ -172,9 +171,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					continue loop;
 				}
 				long currentTimestamp = System.currentTimeMillis();
+				long startCycle = System.currentTimeMillis();
 				if (logger.isDebugEnabled()) {
-					logger.debug("Fetching other than PoLy Lens device list");
+					logger.debug("Fetching Poly Lens devices details.");
 				}
+				
 				if (threadIndex < threadCount && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
 					threadIndex++;
 					populateDeviceDetails();
