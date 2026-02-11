@@ -726,8 +726,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			stats.put(PolyLensConstant.ADAPTER_UPTIME, Util.mapToUptime(adapterInitializationTimestamp));
 			stats.put(PolyLensConstant.ADAPTER_UPTIME_MIN, Util.mapToUptimeMin(adapterInitializationTimestamp));
 			stats.put(PolyLensConstant.MONITORING_CYCLE_INTERVAL, String.valueOf(getMonitoringRate()));
-			stats.put(PolyLensConstant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
-			stats.put(PolyLensConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
 			dynamicStatistics.put(PolyLensConstant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
 			dynamicStatistics.put(PolyLensConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
 		} catch (Exception e) {
