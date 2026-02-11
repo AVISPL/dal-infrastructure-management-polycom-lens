@@ -155,7 +155,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		public void run() {
 			loop:
 			while (inProgress) {
-				long startCycle = System.currentTimeMillis();
 				try {
 					TimeUnit.MILLISECONDS.sleep(500);
 				} catch (InterruptedException e) {
@@ -172,9 +171,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					continue loop;
 				}
 				long currentTimestamp = System.currentTimeMillis();
+				long startCycle = System.currentTimeMillis();
 				if (logger.isDebugEnabled()) {
-					logger.debug("Fetching other than PoLy Lens device list");
+					logger.debug("Fetching Poly Lens devices details.");
 				}
+				
 				if (threadIndex < threadCount && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
 					threadIndex++;
 					populateDeviceDetails();
@@ -725,8 +726,6 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			stats.put(PolyLensConstant.ADAPTER_UPTIME, Util.mapToUptime(adapterInitializationTimestamp));
 			stats.put(PolyLensConstant.ADAPTER_UPTIME_MIN, Util.mapToUptimeMin(adapterInitializationTimestamp));
 			stats.put(PolyLensConstant.MONITORING_CYCLE_INTERVAL, String.valueOf(getMonitoringRate()));
-			stats.put(PolyLensConstant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
-			stats.put(PolyLensConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
 			dynamicStatistics.put(PolyLensConstant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
 			dynamicStatistics.put(PolyLensConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
 		} catch (Exception e) {
