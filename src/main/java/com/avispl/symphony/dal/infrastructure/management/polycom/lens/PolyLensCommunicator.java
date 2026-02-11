@@ -483,6 +483,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				threadCount = PolyLensConstant.TWO_THREADS;
 			}
 			extendedStatistics.setStatistics(statistics);
+			extendedStatistics.setDynamicStatistics(dynamicStatistics);
 			return Collections.singletonList(extendedStatistics);
 		} finally {
 			reentrantLock.unlock();
