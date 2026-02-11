@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,6 +63,7 @@ import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.Pol
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensProperties;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensQueries;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.PolyLensSystemInfoMetric;
+import com.avispl.symphony.dal.infrastructure.management.polycom.lens.common.Util;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.Entitlement;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.LinkedDevice;
 import com.avispl.symphony.dal.infrastructure.management.polycom.lens.dto.system.SystemInformation;
@@ -169,9 +171,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					continue loop;
 				}
 				long currentTimestamp = System.currentTimeMillis();
+				long startCycle = System.currentTimeMillis();
 				if (logger.isDebugEnabled()) {
-					logger.debug("Fetching other than PoLy Lens device list");
+					logger.debug("Fetching Poly Lens devices details.");
 				}
+				
 				if (threadIndex < threadCount && nextDevicesCollectionIterationTimestamp <= currentTimestamp) {
 					threadIndex++;
 					populateDeviceDetails();
@@ -193,7 +197,8 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				}
 				if (threadIndex == threadCount) {
 					threadIndex = 0;
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000;
+					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * 60000L);
+					lastMonitoringCycleDuration = Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
 				}
 
 				if (logger.isDebugEnabled()) {
@@ -255,6 +260,13 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * It can be used to serialize objects to JSON format, and deserialize JSON data to objects.
 	 */
 	ObjectMapper objectMapper = new ObjectMapper();
+
+	/** Application configuration loaded from {@code version.properties}. */
+	private final Properties versionProperties = new Properties();
+	/** Device adapter instantiation timestamp. */
+	private final long adapterInitializationTimestamp = System.currentTimeMillis();
+	/** Duration (in milliseconds) of the last monitoring cycle. */
+	private Long lastMonitoringCycleDuration = 0L;
 
 	/**
 	 * An instance of the AggregatedDeviceProcessor class used to process and aggregate device-related data.
@@ -445,6 +457,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		Map<String, PropertiesMapping> mapping = new PropertiesMappingParser().loadYML(PolyLensConstant.MODEL_MAPPING_AGGREGATED_DEVICE, getClass());
 		aggregatedDeviceProcessor = new AggregatedDeviceProcessor(mapping);
 		this.setTrustAllCertificates(true);
+		versionProperties.load(this.getClass().getResourceAsStream("/version.properties"));
 	}
 
 	/**
@@ -459,7 +472,9 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				throw new ResourceNotReachableException("API Token cannot be null or empty, please enter valid API token in the password and username field.");
 			}
 			Map<String, String> statistics = new HashMap<>();
+			Map<String, String> dynamicStatistics = new HashMap<>();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
+			retrieveMetadata(statistics, dynamicStatistics);
 			retrieveSystemInfo();
 			populateSystemData(statistics);
 
@@ -468,6 +483,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				threadCount = PolyLensConstant.TWO_THREADS;
 			}
 			extendedStatistics.setStatistics(statistics);
+			extendedStatistics.setDynamicStatistics(dynamicStatistics);
 			return Collections.singletonList(extendedStatistics);
 		} finally {
 			reentrantLock.unlock();
@@ -699,6 +715,26 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	}
 
 	/**
+	 * Retrieves metadata information and updates the provided statistics and dynamic map.
+	 *
+	 * @param stats the map where statistics will be stored
+	 * @param dynamicStatistics the map where dynamic statistics will be stored
+	 */
+	private void retrieveMetadata(Map<String, String> stats, Map<String, String> dynamicStatistics) {
+		try {
+			stats.put(PolyLensConstant.ADAPTER_VERSION, getDefaultValueForNullData(versionProperties.getProperty("adapter.version")));
+			stats.put(PolyLensConstant.ADAPTER_BUILD_DATE, getDefaultValueForNullData(versionProperties.getProperty("adapter.build.date")));
+			stats.put(PolyLensConstant.ADAPTER_UPTIME, Util.mapToUptime(adapterInitializationTimestamp));
+			stats.put(PolyLensConstant.ADAPTER_UPTIME_MIN, Util.mapToUptimeMin(adapterInitializationTimestamp));
+			stats.put(PolyLensConstant.MONITORING_CYCLE_INTERVAL, String.valueOf(getMonitoringRate()));
+			dynamicStatistics.put(PolyLensConstant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
+			dynamicStatistics.put(PolyLensConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
+		} catch (Exception e) {
+			logger.error("Failed to populate metadata information", e);
+		}
+	}
+
+	/**
 	 * populate system data from request
 	 *
 	 * @param statistics the stats are list of Statistics
@@ -710,13 +746,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			if (property.isQueryCost()) {
 				queryCostGroup = PolyLensConstant.QUERY_COST_GROUP;
 			}
-			switch (property) {
-				case UPDATE_INTERVAL:
-					statistics.put(queryCostGroup.concat(property.getName()), getMinutesToGetAllDevices());
-					break;
-				default:
-					statistics.put(queryCostGroup.concat(property.getName()), getDefaultValueForNullData(systemInformation.getValueByMetricName(property)));
-			}
+			statistics.put(queryCostGroup.concat(property.getName()), getDefaultValueForNullData(systemInformation.getValueByMetricName(property)));
 		}
 	}
 
@@ -1025,7 +1055,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			return PolyLensConstant.EMPTY;
 		}
 		if (index < 10) {
-			return PolyLensConstant.ZERO + (index + 1);
+			return PolyLensConstant.ZERO + index + 1;
 		}
 		return String.valueOf(index + 1);
 	}
@@ -1272,21 +1302,5 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 		}
 		return output;
-	}
-
-	/**
-	 * Calculates the estimated time in minutes required to retrieve all devices.
-	 *
-	 * @return The estimated time in minutes.
-	 */
-	private String getMinutesToGetAllDevices() {
-		if (systemInformation.getCountDevices() == null) {
-			return PolyLensConstant.NONE;
-		}
-		int result = systemInformation.getCountDevices() / (pageSize * 2);
-		if (systemInformation.getCountDevices() % (pageSize * 2) != 0) {
-			result++;
-		}
-		return String.valueOf(result);
 	}
 }

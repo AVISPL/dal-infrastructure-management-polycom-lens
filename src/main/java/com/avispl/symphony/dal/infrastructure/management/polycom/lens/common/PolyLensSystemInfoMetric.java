@@ -14,8 +14,6 @@ package com.avispl.symphony.dal.infrastructure.management.polycom.lens.common;
  * @since 1.0.0
  */
 public enum PolyLensSystemInfoMetric {
-	COUNT_DEVICES(PolyLensConstant.COUNT_DEVICES, false),
-	UPDATE_INTERVAL(PolyLensConstant.UPDATE_INTERVAL, false),
 	TENANT_COUNT(PolyLensConstant.TENANT_COUNT, false),
 	QUERY_COST(PolyLensConstant.QUERY_COST, true),
 	COST_USED(PolyLensConstant.COST_USED, true),
