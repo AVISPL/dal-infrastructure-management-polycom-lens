@@ -568,7 +568,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			try {
 				controlProperty(p);
 			} catch (Exception e) {
-				logger.error(String.format("Error when control property %s", p.getProperty()), e);
+				logger.error(String.format("Unable to control property %s", p.getProperty()), e);
 			}
 		}
 	}
@@ -789,7 +789,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			int numberDevice = numberDevicesResponse.get(PolyLensConstant.DATA).get(PolyLensConstant.DEVICE_SEARCH).get(PolyLensConstant.PAGE_INFO).get(PolyLensConstant.TOTAL_COUNT).asInt();
 			systemInformation.setCountDevices(numberDevice);
 		} catch (Exception e) {
-			throw new ResourceNotReachableException("Error when get system information.", e);
+			throw new ResourceNotReachableException("Unable to retrieve system information.", e);
 		}
 	}
 
@@ -1279,7 +1279,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			SimpleDateFormat outputFormatter = new SimpleDateFormat(PolyLensConstant.NEW_FORMAT_DATETIME, Locale.US);
 			outputDateTime = outputFormatter.format(date);
 		} catch (Exception e) {
-			logger.debug("Error when convert format datetime");
+			logger.debug(String.format("Unable to parse the datetime %s with format %s.", dateTime, PolyLensConstant.NEW_FORMAT_DATETIME));
 		}
 		return outputDateTime;
 	}
