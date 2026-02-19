@@ -512,7 +512,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			}
 			return cloneAndPopulateAggregatedDeviceList();
 		}
-		return Collections.emptyList();
+		return new ArrayList<>();
 	}
 
 	/**
