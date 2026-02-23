@@ -197,7 +197,12 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				}
 				if (threadIndex == threadCount) {
 					threadIndex = 0;
-					nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * 60000L);
+					try {
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + (getMonitoringRate() * 60000L);
+					} catch (NoSuchMethodError nsme) {
+						nextDevicesCollectionIterationTimestamp = System.currentTimeMillis() + 60000L;
+						logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+					}
 					lastMonitoringCycleDuration = Math.max((System.currentTimeMillis() - startCycle) / 1000, 1L);
 				}
 
@@ -508,11 +513,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				throw new FailedLoginException("Can't get token from client id and client secret");
 			}
 			if (cachedAggregatedDeviceList.isEmpty()) {
-				return cachedAggregatedDeviceList;
+				return Collections.emptyList();
 			}
 			return cloneAndPopulateAggregatedDeviceList();
 		}
-		return new ArrayList<>();
+		return Collections.emptyList();
 	}
 
 	/**
@@ -726,7 +731,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			stats.put(PolyLensConstant.ADAPTER_BUILD_DATE, getDefaultValueForNullData(versionProperties.getProperty("adapter.build.date")));
 			stats.put(PolyLensConstant.ADAPTER_UPTIME, Util.mapToUptime(adapterInitializationTimestamp));
 			stats.put(PolyLensConstant.ADAPTER_UPTIME_MIN, Util.mapToUptimeMin(adapterInitializationTimestamp));
-			stats.put(PolyLensConstant.MONITORING_CYCLE_INTERVAL, String.valueOf(getMonitoringRate()));
+			try {
+				stats.put(PolyLensConstant.MONITORING_CYCLE_INTERVAL, String.valueOf(getMonitoringRate()));
+			} catch (NoSuchMethodError nsme) {
+				logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+			}
 			dynamicStatistics.put(PolyLensConstant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
 			dynamicStatistics.put(PolyLensConstant.MONITORED_DEVICES_TOTAL, String.valueOf(aggregatedDeviceList.size()));
 		} catch (Exception e) {
