@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -368,12 +369,12 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	/**
 	 * List of aggregated device
 	 */
-	private List<AggregatedDevice> aggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
+	private final Map<String, AggregatedDevice> aggregatedDeviceList = new ConcurrentHashMap<>();
 
 	/**
 	 * List of cached aggregated device
 	 */
-	private List<AggregatedDevice> cachedAggregatedDeviceList = Collections.synchronizedList(new ArrayList<>());
+	private final Map<String, AggregatedDevice> cachedAggregatedDeviceList = new ConcurrentHashMap<>();
 
 	/**
 	 * List of System Response
@@ -541,7 +542,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 			String property = controllableProperty.getProperty();
 			String deviceId = controllableProperty.getDeviceId();
 			PolyLensProperties propertyItem = PolyLensProperties.getByName(property);
-			Optional<AggregatedDevice> aggregatedDevice = aggregatedDeviceList.stream().filter(item -> item.getDeviceId().equals(deviceId)).findFirst();
+			Optional<AggregatedDevice> aggregatedDevice = aggregatedDeviceList.values().stream().filter(item -> item.getDeviceId().equals(deviceId)).findFirst();
 			if (aggregatedDevice.isPresent()) {
 				switch (propertyItem) {
 					case REBOOT_DEVICE:
@@ -824,8 +825,10 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 				JsonNode node = objectMapper.createArrayNode().add(jsonNode.get(PolyLensConstant.NODE));
 
 				String id = jsonNode.get(PolyLensConstant.NODE).get(PolyLensConstant.ID).asText();
-				cachedAggregatedDeviceList.removeIf(item -> item.getDeviceId().equals(id));
-				cachedAggregatedDeviceList.addAll(aggregatedDeviceProcessor.extractDevices(node));
+				cachedAggregatedDeviceList.remove(id);
+				aggregatedDeviceProcessor.extractDevices(node).forEach(device -> {
+					cachedAggregatedDeviceList.put(device.getDeviceId(), device);
+				});
 			}
 		} catch (Exception e) {
 			logger.error("Error while populate aggregated device", e);
@@ -840,7 +843,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 */
 	private List<AggregatedDevice> cloneAndPopulateAggregatedDeviceList() {
 		synchronized (aggregatedDeviceList) {
-			for (AggregatedDevice aggregatedDevice : cachedAggregatedDeviceList) {
+			for (AggregatedDevice aggregatedDevice : cachedAggregatedDeviceList.values()) {
 				Map<String, String> stats = aggregatedDevice.getProperties();
 				List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
 				stats = mapMonitoringProperty(stats);
@@ -848,9 +851,10 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 					createControl(controllableProperties, stats);
 				}
 
-				Optional<AggregatedDevice> optionalDevice = aggregatedDeviceList.stream()
-						.filter(device -> device.getDeviceId().equals(aggregatedDevice.getDeviceId())).findFirst();
-				AggregatedDevice device = optionalDevice.orElse(new AggregatedDevice());
+				AggregatedDevice device = aggregatedDeviceList.get(aggregatedDevice.getDeviceId());
+				if (device == null) {
+					device = new AggregatedDevice();
+				}
 
 				device.setDeviceId(aggregatedDevice.getDeviceId());
 				device.setDeviceModel(aggregatedDevice.getDeviceModel());
@@ -869,7 +873,7 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 		if (systemInformation.getCountDevices() < cachedAggregatedDeviceList.size()) {
 			cachedAggregatedDeviceList.clear();
 		}
-		return aggregatedDeviceList;
+		return new ArrayList<>(aggregatedDeviceList.values());
 	}
 
 	/**
@@ -878,11 +882,11 @@ public class PolyLensCommunicator extends RestCommunicator implements Aggregator
 	 * @param aggregatedDevice The aggregated device to be added or updated.
 	 */
 	private void addOrUpdateAggregatedDevice(AggregatedDevice aggregatedDevice) {
-		boolean isExist = aggregatedDeviceList.stream().anyMatch(dev -> dev.getDeviceId().equals(aggregatedDevice.getDeviceId()));
+		boolean isExist = aggregatedDeviceList.containsKey(aggregatedDevice.getDeviceId());
 		if (isExist) {
-			aggregatedDeviceList.removeIf(dev -> dev.getDeviceId().equals(aggregatedDevice.getDeviceId()));
+			aggregatedDeviceList.remove(aggregatedDevice.getDeviceId());
 		}
-		aggregatedDeviceList.add(aggregatedDevice);
+		aggregatedDeviceList.put(aggregatedDevice.getDeviceId(), aggregatedDevice);
 	}
 
 	/**
