@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'release/**'
+      - 'bugfix/**'
       - 'hotfix/**'
 jobs:
   prep:
@@ -15,7 +16,7 @@ jobs:
       date: ${{ steps.date.outputs.date }}
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 1.8 & run tests & generate artifacts
+      - name: Set up JDK 17 & run tests & generate artifacts
         uses: actions/setup-java@v4
         with:
           distribution: adopt
@@ -40,7 +41,7 @@ jobs:
     needs: versiongenerate
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 1.8 & run tests & generate artifacts
+      - name: Set up JDK 17 & run tests & generate artifacts
         uses: actions/setup-java@v4
         with:
           distribution: adopt
@@ -49,12 +50,12 @@ jobs:
       - name: Version set
         run: mvn versions:set versions:commit -DnewVersion=${{ needs.versiongenerate.outputs.version }}
       - name: Build and test with Maven
-        run: mvn clean install -DkipTests
+        run: mvn -B clean install -DskipTests
       - name: PMD check
         run: mvn pmd:check
       - id: getfilename
         run: echo "file=$(ls target/symphony-dal-infrastructure-management-polycom-lens-${{ needs.versiongenerate.outputs.version }}.jar)" >> $GITHUB_OUTPUT
       - uses: actions/upload-artifact@v4
         with:
-          name: PolyLens
+          name: PolyLensCommunicator
           path: ${{ steps.getfilename.outputs.file }}

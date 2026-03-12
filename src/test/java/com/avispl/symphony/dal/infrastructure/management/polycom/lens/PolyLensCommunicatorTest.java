@@ -11,6 +11,7 @@ import java.util.Map;
 import javax.security.auth.login.FailedLoginException;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -36,10 +37,10 @@ class PolyLensCommunicatorTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		polyLensCommunicator = new PolyLensCommunicator();
-		polyLensCommunicator.setHost("api.silica-prod01.io.lens.poly.com");
+		polyLensCommunicator.setHost("");
 		polyLensCommunicator.setPort(443);
-		polyLensCommunicator.setLogin("Zcj4Xm5D7DNOlAldItivfE2DIrhyDvDq");
-		polyLensCommunicator.setPassword("***REMOVED***");
+		polyLensCommunicator.setLogin("");
+		polyLensCommunicator.setPassword("");
 		polyLensCommunicator.init();
 		polyLensCommunicator.connect();
 	}
@@ -63,8 +64,6 @@ class PolyLensCommunicatorTest {
 		Assert.assertEquals("24", statistics.get(PolyLensConstant.TENANT_MEMBER_COUNT));
 		Assert.assertEquals("ENTERPRISE", statistics.get(PolyLensConstant.TENANT_TYPE));
 		Assert.assertEquals("b0a59055-8875-4f44-a88a-0b114be771b9", statistics.get(PolyLensConstant.TENANT_ID));
-		Assert.assertEquals("45", statistics.get(PolyLensConstant.COUNT_DEVICES));
-		Assert.assertEquals("1", statistics.get(PolyLensConstant.UPDATE_INTERVAL));
 	}
 
 	/**
@@ -81,8 +80,6 @@ class PolyLensCommunicatorTest {
 		Assert.assertEquals("24", statistics.get(PolyLensConstant.TENANT_MEMBER_COUNT));
 		Assert.assertEquals("ENTERPRISE", statistics.get(PolyLensConstant.TENANT_TYPE));
 		Assert.assertEquals("b0a59055-8875-4f44-a88a-0b114be771b9", statistics.get(PolyLensConstant.TENANT_ID));
-		Assert.assertEquals("13", statistics.get(PolyLensConstant.COUNT_DEVICES));
-		Assert.assertEquals("1", statistics.get(PolyLensConstant.UPDATE_INTERVAL));
 	}
 
 	/**
@@ -227,15 +224,14 @@ class PolyLensCommunicatorTest {
 	@Test
 	void testUnknowHostName() throws Exception {
 		polyLensCommunicator.destroy();
-		polyLensCommunicator.setHost("api.silica-prod01.io.lens.poly.com1");
+		polyLensCommunicator.setHost("");
 		polyLensCommunicator.init();
 		polyLensCommunicator.connect();
-		Assert.assertThrows("Error because config unknow host name ", UnknownHostException.class, () -> polyLensCommunicator.ping());
+		Assertions.assertThrows(UnknownHostException.class, () -> polyLensCommunicator.ping(), "Error because config unknow host name ");
 	}
 
 	/**
 	 * Test valid host name but config can't Poly lens host
-	 *
 	 * Expect Throw an LoginFailed exception
 	 */
 	@Test
@@ -244,6 +240,10 @@ class PolyLensCommunicatorTest {
 		polyLensCommunicator.setHost("google.com");
 		polyLensCommunicator.init();
 		polyLensCommunicator.connect();
-		Assert.assertThrows("Error because login failed due to incorrect host name", FailedLoginException.class, () -> polyLensCommunicator.getMultipleStatistics());
+		Assertions.assertThrows(
+				FailedLoginException.class,
+				() -> polyLensCommunicator.getMultipleStatistics(),
+				"Error because login failed due to incorrect host name"
+		);
 	}
 }

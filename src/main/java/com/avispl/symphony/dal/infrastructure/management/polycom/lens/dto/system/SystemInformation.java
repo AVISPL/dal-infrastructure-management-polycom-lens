@@ -127,9 +127,6 @@ public class SystemInformation {
 		}
 
 		switch (name) {
-			case COUNT_DEVICES:
-				result = checkObjectNull(this.getCountDevices());
-				break;
 			case TENANT_COUNT:
 				result = checkObjectNull(this.getTenantCount());
 				break;
