@@ -136,12 +136,12 @@ Monitoring and control capabilities may depend on the device model.
 
 If none of the recommended steps help, please enter an SOS ticket at {https://avi-spl.atlassian.net/servicedesk/customer/portals}
 
-## What Melody can do with it:
+## What AI Assistant can do with it:
 - Find and Monitor Poly Lens Aggregated Devices (Poly Lens Aggregator as Monitoring Proxy)
 - Verify Poly Lens Aggregator configuration
 - Track linked peripherals and associated devices
 
-## What Melody cannot do with it:
+## What AI Assistant cannot do with it:
 - Provision devices automatically
 - Monitor unsupported Poly device models
 - Guarantee identical monitoring capabilities across all Poly devices
