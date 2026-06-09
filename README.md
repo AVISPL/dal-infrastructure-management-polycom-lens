@@ -2,34 +2,30 @@
 This document covers Poly Lens Aggregator Capabilities and Configuration.
 
 Symphony integrates with Poly Lens to provide centralized monitoring and management of Poly collaboration devices.
-Main features are: real-time device health monitoring, bandwidth and network quality monitoring, inventory visibility, linked peripheral tracking, system status monitoring, and device control capabilities.
-
 Poly Lens provides a centralized dashboard for monitoring Poly devices such as conference phones, video conferencing systems, and peripherals.
 
-## Main use cases
+## Main use cases for Poly Lens Integration
 - **Monitor** Poly device health, connectivity, operational status and bandwidth/network quality metrics
 - **Track** individual device details - serial number, MAC address, software version, peripherals, room and site information
 - **Inventory** all Poly devices registered to the Poly Lens tenant
 - **Control** supported devices through available actions such as Reboot Device
 - **Filter** monitored devices by model, room, or site
 
-## Prerequisites and where to start
+## Prerequisites for the Poly Lens Connection Setup 
 Poly Lens Aggregator communicates with the Poly Lens Cloud API using HTTPS connectivity.
+
+Note: The prerequisites below describe the requirements for a successful Poly Lens integration setup. They are not to be infered as troubleshooting checks and should not be used when diagnosing specific errors unless a troubleshooting entry (provided in the Troubleshooting section) explicitly references them.
 
 Before integrating Poly Lens with Symphony, the following prerequisites must be completed:
 - Active Poly Lens tenant/account
 - Poly devices registered and visible within Poly Lens
 - Client ID and Client Secret credentials generated from Poly Lens
 
-The Symphony instance or Cloud Connector must be able to reach:
-- Management address: 'api.silica-prod01.io.lens.poly.com' (DNS endpoint may vary)
-- HTTPS / TCP Port: 443
-
 Firewall or proxy rules must allow outbound HTTPS connectivity for communication between the Symphony Cloud Connector to the Poly Lens cloud endpoint.
 
-## Poly Lens Device Configuration and Provisioning
+## Poly Lens Connection Setup and Provisioning
 
-The Poly Lens Aggregator device must be configured in Symphony with the following values:
+The Poly Lens Aggregator connection must be setup in Symphony with the following values:
 
 | Field | Value |
 |---|---|
@@ -43,13 +39,12 @@ The Poly Lens Aggregator device must be configured in Symphony with the followin
 | Username | Client ID |
 | Password | Client Secret |
 | Port Number | 443 |
-| Management Address | Example: api.silica-prod01.io.lens.poly.com (DNS endpoint may vary and may change over time) |
+| Management Address | Poly Lens API hostname. Example: api.silica-prod01.io.lens.poly.com. The actual hostname may vary by Poly Lens environment and is subject to change. |
 
 Supported Models: All Poly devices, supported by the Poly Lens App.
 
 The aggregated Poly devices will be available as aggregated devices with different models.
 
-When the device is configured, saved and set active, Poly Lens Aggregator will start communicating with the Poly Lens API to retrieve data about registered devices, based on the provided configuration.
 By default, the unprovisioned devices will appear on Aggregated Devices -> Unprovisioned Devices tab.
 
 To import a Poly Lens aggregated device for monitoring by the Poly Lens Aggregator:
@@ -72,20 +67,18 @@ Note: If Supported Protocol or Calling Method are not provided, the device will 
 
 For detailed information on aggregator and its configuration, please refer to our knowledgebase -> https://symphony.knowledgeowl.com/help/poly-lens-aggregator-technical-breakdown
 
-Devices and available device data can be tuned by adapter configuration properties.
+**Adapter configuration properties** - For filtering Device(s) and component(s)
 
-## Filtering Device(s) and Component(s)
-
-| Property | Description | Value |
-|---|---|---|
-| filterModelName | Filter devices by Poly device model name | CSV/String |
-| filterRoomName | Filter devices by room name | CSV/String |
-| filterSiteName | Filter devices by site name | CSV/String |
-| filterExcludeRoomName | Exclude devices by room name | CSV/String |
+| Property | Description |
+| --- | --- |
+| filterModelName | Filter devices by Poly device model name |
+| filterRoomName | Filter devices by room name |
+| filterSiteName | Filter devices by site name |
+| filterExcludeRoomName | Exclude devices by room name |
 
 Note: When filtering devices, it is recommended to export the CSV device list from the Poly Lens dashboard and use it to validate filters and monitoring scope.
 
-## Available Monitored Data
+## Available Monitored Data for Poly Devices
 Poly Lens Aggregator monitored data consists of 2 parts: Aggregator extended properties and Aggregated Device extended properties.
 
 Available aggregator properties include:
@@ -96,7 +89,7 @@ Available aggregator properties include:
 | Tenant Information | TenantCount, TenantID, TenantMemberCount, TenantName, TenantType |
 | QueryCost Group | QueryCost Group is used to determine the cost of executing API queries. CostRemaining value resets to 100K entries every 60 seconds. -> CostRemaining, CostUsed, QueryCost, SecondsToReset |
 
-Aggregated Devices provide the following monitoring and control capabilities:
+Poly Lens aggreagtor exposes these property groups for the aggregated devices:
 
 | Property Type | Description |
 |---|---|
@@ -116,32 +109,37 @@ Supported control capabilities:
 |---|---|
 | Reboot Device | Reboot supported Poly devices |
 
-Note: When aggregated device is offline, RebootDevice button will disappear.
-Monitoring and control capabilities may depend on the device model.
+Note: When aggregated device is offline, RebootDevice button will disappear. Monitoring and control capabilities may depend on the device model.
 
-## Troubleshooting
-** Login Error **
+## Troubleshooting for Poly Lens Integration
+
+**Troubleshooting guidance**
+- If an error occurs, focus only on troubleshooting steps that are provided in the section below.
+- Do not include prerequisite/setup information.
+- Do not add unrelated configuration details from other sections.
+- If the document does not provide a direct error troubleshooting step, state that the document does not contain enough guidance for that specific issue.
+
+**Login Error**
 - Verify Client ID and Client Secret are correct
 - Verify HTTPS configuration
-- Verify Monitoring Service is set to Advanced Monitoring and Monitoring Source is set to Direct
 
-** API Error **
+**API Error**
 - Check API error description
 - Verify Poly Lens cloud hostname configuration and device filtering properties
 - Verify QueryCost group values if monitoring data is incomplete
 
-** Link Error/Ping Timeout **
+**Link Error/Ping Timeout**
 - Verify Cloud Connector connectivity to the management address.
 - Verify outbound HTTPS connectivity & firewall/proxy configuration
 
 If none of the recommended steps help, please enter an SOS ticket at {https://avi-spl.atlassian.net/servicedesk/customer/portals}
 
-## What AI Assistant can do with it:
+## What AI Assistant can do with the Poly Lens Integration:
 - Find and Monitor Poly Lens Aggregated Devices (Poly Lens Aggregator as Monitoring Proxy)
 - Verify Poly Lens Aggregator configuration
 - Track linked peripherals and associated devices
 
-## What AI Assistant cannot do with it:
+## What AI Assistant cannot do with the Poly Lens Integration:
 - Provision devices automatically
 - Monitor unsupported Poly device models
 - Guarantee identical monitoring capabilities across all Poly devices
