@@ -121,7 +121,7 @@ Note: When aggregated device is offline, RebootDevice button will disappear. Mon
 
 **Login Error**
 - Verify Client ID and Client Secret are correct
-- Verify HTTPS configuration
+- Verify Management Protocol configuration
 
 **API Error**
 - Check API error description
