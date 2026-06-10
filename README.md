@@ -21,6 +21,8 @@ Before integrating Poly Lens with Symphony, the following prerequisites must be 
 - Poly devices registered and visible within Poly Lens
 - Client ID and Client Secret credentials generated from Poly Lens
 
+Note: Access the Poly Lens portal at https://lens.poly.com to generate API credentials and manage devices.
+
 Firewall or proxy rules must allow outbound HTTPS connectivity for communication between the Symphony Cloud Connector to the Poly Lens cloud endpoint.
 
 ## Poly Lens Connection Setup and Provisioning
